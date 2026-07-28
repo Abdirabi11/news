@@ -1,0 +1,369 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// generator client {
+//   provider = "prisma-client"
+//   output   = "../src/generated/prisma"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+// Enums
+// -------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  EDITOR
+  AUTHOR
+  READER
+}
+
+enum Locale {
+  en
+  so
+  ar
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+// -------------------------------------------------------------
+// Users & Auth (NextAuth-compatible)
+// -------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?   // null for OAuth-only accounts
+  image         String?
+  role          Role      @default(READER)
+  bio           String?   @db.Text
+  // Public author page slug, e.g. /en/author/amina-yusuf
+  authorSlug    String?   @unique
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  articles      Article[]           @relation("ArticleAuthor")
+  editedArticles Article[]          @relation("ArticleEditor")
+  comments      Comment[]
+  media         Media[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// -------------------------------------------------------------
+// Articles (hub) + ArticleTranslation (per-locale content)
+// -------------------------------------------------------------
+
+model Article {
+  id            String        @id @default(cuid())
+  status        ArticleStatus @default(DRAFT)
+  // Set by BullMQ scheduled-publishing worker
+  scheduledFor  DateTime?
+  publishedAt   DateTime?
+  // Editorial flags
+  isFeatured    Boolean       @default(false)
+  isBreaking    Boolean       @default(false)
+  allowComments Boolean       @default(true)
+
+  authorId      String
+  author        User          @relation("ArticleAuthor", fields: [authorId], references: [id])
+  editorId      String?
+  editor        User?         @relation("ArticleEditor", fields: [editorId], references: [id])
+
+  categoryId    String?
+  category      Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  coverImageId  String?
+  coverImage    Media?        @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+
+  // Aggregated from Redis by the view-count flush worker
+  viewCount     Int           @default(0)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  translations  ArticleTranslation[]
+  tags          ArticleTag[]
+  comments      Comment[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([status, scheduledFor])            // scheduled-publish cron scan
+  @@index([categoryId, status, publishedAt(sort: Desc)])
+  @@index([authorId, status])
+  @@index([isFeatured, status, publishedAt(sort: Desc)])
+  @@map("articles")
+}
+
+model ArticleTranslation {
+  id              String   @id @default(cuid())
+  articleId       String
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  locale          Locale
+
+  title           String
+  slug            String
+  excerpt         String?  @db.Text
+  // Tiptap JSON document — rendered server-side to HTML/MDX
+  content         Json
+  // Plain-text extraction of content, used to build the tsvector
+  contentText     String?  @db.Text
+
+  // Per-locale SEO overrides
+  seoTitle        String?
+  seoDescription  String?
+  ogImageUrl      String?
+
+  // Reading time in minutes, computed on save
+  readingTime     Int      @default(1)
+
+  // Full-text search vector; populated & indexed via raw SQL
+  // migration (GIN index + trigger). Prisma treats it as opaque.
+  searchVector    Unsupported("tsvector")?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([articleId, locale])
+  @@unique([slug, locale])       // slugs unique per locale, not globally
+  @@index([locale])
+  @@map("article_translations")
+}
+
+// -------------------------------------------------------------
+// Categories + translations
+// -------------------------------------------------------------
+
+model Category {
+  id           String   @id @default(cuid())
+  // Optional hierarchy (e.g. World > Africa)
+  parentId     String?
+  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[] @relation("CategoryTree")
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  translations CategoryTranslation[]
+  articles     Article[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  id          String   @id @default(cuid())
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  locale      Locale
+  name        String
+  slug        String
+  description String?  @db.Text
+
+  @@unique([categoryId, locale])
+  @@unique([slug, locale])
+  @@map("category_translations")
+}
+
+// -------------------------------------------------------------
+// Tags + translations (explicit join table for article<->tag)
+// -------------------------------------------------------------
+
+model Tag {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+
+  translations TagTranslation[]
+  articles     ArticleTag[]
+
+  @@map("tags")
+}
+
+model TagTranslation {
+  id      String @id @default(cuid())
+  tagId   String
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  locale  Locale
+  name    String
+  slug    String
+
+  @@unique([tagId, locale])
+  @@unique([slug, locale])
+  @@map("tag_translations")
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@index([tagId])
+  @@map("article_tags")
+}
+
+// -------------------------------------------------------------
+// Comments (threaded, moderated)
+// -------------------------------------------------------------
+
+model Comment {
+  id        String        @id @default(cuid())
+  articleId String
+  article   Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  parentId  String?
+  parent    Comment?      @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentThread")
+
+  body      String        @db.Text
+  status    CommentStatus @default(PENDING)
+  // Locale of the article page the comment was posted from
+  locale    Locale
+
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([articleId, status, createdAt(sort: Desc)])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([status])       // moderation queue
+  @@map("comments")
+}
+
+// -------------------------------------------------------------
+// Media library (CDN-backed)
+// -------------------------------------------------------------
+
+model Media {
+  id          String   @id @default(cuid())
+  uploaderId  String
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+
+  // Storage key in R2/S3; public URL is derived from CDN base
+  storageKey  String   @unique
+  url         String
+  mimeType    String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  altText     String?
+  caption     String?
+  // Set true by the BullMQ thumbnail worker when variants exist
+  processed   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  articles    Article[]
+
+  @@index([uploaderId, createdAt(sort: Desc)])
+  @@map("media")
+}
+
+// -------------------------------------------------------------
+// Analytics & Newsletter
+// -------------------------------------------------------------
+
+// Daily rollup written by the view-flush worker (Redis -> PG)
+model ArticleDailyStat {
+  id        String   @id @default(cuid())
+  articleId String
+  date      DateTime @db.Date
+  views     Int      @default(0)
+
+  @@unique([articleId, date])
+  @@index([date])
+  @@map("article_daily_stats")
+}
+
+model NewsletterSubscriber {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  locale       Locale    @default(en)
+  isConfirmed  Boolean   @default(false)
+  confirmToken String?   @unique
+  subscribedAt DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([locale, isConfirmed])
+  @@map("newsletter_subscribers")
+}
+

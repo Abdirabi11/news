@@ -1,0 +1,48 @@
+{
+  "site": {
+    "name": "Newsroom",
+    "tagline": "الأخبار بثلاث لغات"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "latest": "الأحدث",
+    "search": "بحث",
+    "signIn": "تسجيل الدخول",
+    "seeAll": "عرض الكل"
+  },
+  "article": {
+    "by": "بقلم",
+    "publishedOn": "نُشر في",
+    "readMore": "اقرأ المزيد",
+    "minRead": "دقائق قراءة",
+    "featured": "مميز",
+    "breaking": "عاجل",
+    "inCategory": "في قسم"
+  },
+  "home": {
+    "latestNews": "آخر الأخبار",
+    "mostRead": "الأكثر قراءة",
+    "empty": "لم تُنشر أي مقالات بعد. عُد قريباً."
+  },
+  "search": {
+    "title": "بحث",
+    "placeholder": "ابحث عن مقالات…",
+    "button": "بحث",
+    "resultsFor": "نتائج البحث عن",
+    "noResults": "لا توجد مقالات مطابقة لبحثك."
+  },
+  "author": {
+    "articlesBy": "مقالات"
+  },
+  "footer": {
+    "rights": "جميع الحقوق محفوظة.",
+    "languages": "اللغات",
+    "sections": "الأقسام",
+    "about": "عن الموقع",
+    "aboutUs": "من نحن",
+    "contact": "اتصل بنا",
+    "newsletter": "النشرة البريدية",
+    "emailPlaceholder": "بريدك الإلكتروني",
+    "subscribe": "اشترك"
+  }
+}

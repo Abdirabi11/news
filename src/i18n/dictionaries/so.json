@@ -1,0 +1,48 @@
+{
+  "site": {
+    "name": "Newsroom",
+    "tagline": "News in three languages"
+  },
+  "nav": {
+    "home": "Home",
+    "latest": "Latest",
+    "search": "Search",
+    "signIn": "Sign in",
+    "seeAll": "See all"
+  },
+  "article": {
+    "by": "By",
+    "publishedOn": "Published on",
+    "readMore": "Read more",
+    "minRead": "min read",
+    "featured": "Featured",
+    "breaking": "Breaking",
+    "inCategory": "In"
+  },
+  "home": {
+    "latestNews": "Latest news",
+    "mostRead": "Most read",
+    "empty": "No articles published yet. Check back soon."
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search articles…",
+    "button": "Search",
+    "resultsFor": "Results for",
+    "noResults": "No articles matched your search."
+  },
+  "author": {
+    "articlesBy": "Articles by"
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "languages": "Languages",
+    "sections": "Sections",
+    "about": "About",
+    "aboutUs": "About us",
+    "contact": "Contact",
+    "newsletter": "Newsletter",
+    "emailPlaceholder": "Your email",
+    "subscribe": "Subscribe"
+  }
+}

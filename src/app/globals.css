@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+/**
+ * Claude / Linear / Vercel-class palette.
+ *
+ * Clean neutrals, one calm indigo accent, a warm sand tint held in
+ * reserve. Whitespace and soft radii carry the aesthetic — color
+ * stays quiet.
+ */
+:root {
+  /* Surfaces */
+  --c-canvas: 250 250 250;   /* #fafafa */
+  --c-surface: 255 255 255;  /* #ffffff */
+  --c-sand: 245 241 234;     /* #f5f1ea warm tint, used sparingly */
+ 
+  /* Text */
+  --c-ink: 39 39 42;         /* #27272a headings */
+  --c-ink-soft: 82 82 91;    /* #52525b body */
+  --c-ink-muted: 113 113 122;/* #71717a captions/meta */
+ 
+  /* Lines */
+  --c-hair: 244 244 245;     /* #f4f4f5 subtle borders */
+  --c-ring: 228 228 231;     /* #e4e4e7 defined rings */
+ 
+  /* Accent — calm indigo (NOT terracotta) */
+  --c-accent: 91 91 214;         /* #5b5bd6 */
+  --c-accent-hover: 75 75 196;   /* #4b4bc4 */
+  --c-accent-soft: 238 238 251;  /* #eeeefb */
+}
+ 
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+ 
+  body {
+    background-color: rgb(var(--c-canvas));
+    color: rgb(var(--c-ink-soft));
+  }
+ 
+  ::selection {
+    background-color: rgb(var(--c-accent-soft));
+    color: rgb(var(--c-accent-hover));
+  }
+}
+ 
+/**
+ * Article reading surface — the ONE place the serif appears.
+ * Everything else on the site is sans.
+ */
+@layer components {
+  .prose-reading {
+    font-family: var(--font-serif), Georgia, serif;
+    font-size: 1.1875rem; /* 19px */
+    line-height: 1.8;
+    color: rgb(var(--c-ink-soft));
+  }
+ 
+  .prose-reading :is(h2, h3) {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    color: rgb(var(--c-ink));
+    letter-spacing: -0.011em;
+  }
+ 
+  /* Arabic has no serif coverage — use the Arabic sans, looser leading. */
+  [dir="rtl"] .prose-reading {
+    font-family: var(--font-arabic), sans-serif;
+    line-height: 2;
+  }
+}

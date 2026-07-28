@@ -1,0 +1,76 @@
+/**
+ * /news-sitemap.xml — Google News sitemap (manual route handler).
+ *
+ * Google News only considers articles from the last 48 hours and
+ * requires the news: XML namespace, which Next's sitemap.ts
+ * convention can't emit — hence hand-built XML here.
+ *
+ * One <url> per article TRANSLATION, each with its own
+ * news:language — this is how a trilingual publication tells Google
+ * News which language edition each URL belongs to.
+ *
+ * Cached for 15 minutes via route segment revalidation; Google News
+ * crawls frequently, and a 15-minute lag on a 48-hour window is
+ * negligible.
+ */
+import { ArticleStatus } from "@prisma/client";
+import { prisma } from "@/server/db/client";
+ 
+export const revalidate = 900;
+ 
+const SITE_NAME = "Newsroom";
+ 
+const escapeXml = (s: string): string =>
+  s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+ 
+export async function GET() {
+  const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
+  const since = new Date(Date.now() - 48 * 3_600_000);
+ 
+  const articles = await prisma.article.findMany({
+    where: {
+      status: ArticleStatus.PUBLISHED,
+      publishedAt: { gte: since },
+    },
+    select: {
+      publishedAt: true,
+      translations: { select: { locale: true, slug: true, title: true } },
+    },
+    orderBy: { publishedAt: "desc" },
+    take: 1000, // Google News sitemap limit
+  });
+ 
+  const urls = articles
+    .flatMap((article) =>
+      article.translations.map(
+        (t) => `  <url>
+    <loc>${siteUrl}/${t.locale}/article/${escapeXml(t.slug)}</loc>
+    <news:news>
+      <news:publication>
+        <news:name>${escapeXml(SITE_NAME)}</news:name>
+        <news:language>${t.locale}</news:language>
+      </news:publication>
+      <news:publication_date>${article.publishedAt!.toISOString()}</news:publication_date>
+      <news:title>${escapeXml(t.title)}</news:title>
+    </news:news>
+  </url>`,
+      ),
+    )
+    .join("\n");
+ 
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+${urls}
+</urlset>`;
+ 
+  return new Response(xml, {
+    headers: { "Content-Type": "application/xml; charset=utf-8" },
+  });
+}
+ 
