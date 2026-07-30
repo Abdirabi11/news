@@ -55,7 +55,7 @@ export default async function RootLayout({
       className={`${figtree.variable} ${lora.variable} ${notoArabic.variable}`}
     >
       <body
-        className="min-h-screen bg-paper text-ink antialiased"
+        className="min-h-screen bg-canvas text-ink antialiased"
         style={{
           fontFamily:
             appLocale === "ar"

@@ -1,36 +1,75 @@
-/**
- * /[locale] — the magazine homepage.
- *
- * ISR (revalidate 300s) + on-demand revalidation from the publish
- * worker. Structure:
- *   1. LeadStory     — hero + secondary rail (full width)
- *   2. LatestStrip   — 4 compact newest cards (full width)
- *   3. Section bands beside a sticky trending rail (2-col grid)
- *
- * All data comes from existing services (article-cards, trending)
- * plus the section-bands helper. Server Component throughout; the
- * only client JS on this page is TrendingSidebar's parent chrome
- * (it's actually a server component too) — so the homepage ships
- * effectively zero page-level JS.
- *
- * RTL: the lead story's secondary rail and the sticky trending rail
- * both flip sides automatically via CSS grid source-order + logical
- * borders; no direction-specific code.
- */
+import Link from "next/link";
+import Image from "next/image";
+import { Play } from "lucide-react";
 import { Locale, ArticleStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { getDictionary, type AppLocale } from "@/i18n";
+import { getDictionary, formatDate, type AppLocale } from "@/i18n";
 import {
   fetchArticleCards,
   type ArticleCard,
 } from "@/server/services/article-cards";
-import { sectionBands } from "@/server/services/section-bands";
-import { LeadStory } from "@/components/home/lead-story";
-import { LatestStrip } from "@/components/home/latest-strip";
-import { SectionBand } from "@/components/home/section-band";
-import { TrendingSidebar } from "@/components/article/trending-sidebar";
 
 export const revalidate = 300;
+
+function Kicker({ name }: { name: string | null }) {
+  if (!name) return null;
+  return (
+    <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-sage">
+      {name}
+    </span>
+  );
+}
+
+function LeadStory({
+  card,
+  locale,
+}: {
+  card: ArticleCard;
+  locale: AppLocale;
+}) {
+  return (
+    <article>
+      <Link href={`/${locale}/article/${card.slug}`} className="group block">
+        {card.cover && (
+          <div className="overflow-hidden rounded-2xl">
+            <div className="relative aspect-[16/10]">
+              <Image
+                src={card.cover.url}
+                alt={card.cover.altText ?? ""}
+                fill
+                priority
+                sizes="(min-width:1024px) 55vw, 100vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
+        )}
+        <div className="mt-5">
+          <Kicker name={card.categoryName} />
+          <h1 className="mt-2 text-3xl font-bold leading-[1.15] tracking-tight text-ink sm:text-4xl">
+            {card.title}
+          </h1>
+          {card.excerpt && (
+            <p className="mt-3 text-lg leading-relaxed text-ink-soft">
+              {card.excerpt}
+            </p>
+          )}
+          <p className="mt-4 text-sm text-ink-muted">
+            {card.authorName && (
+              <>
+                <span className="font-medium text-ink-soft">
+                  {card.authorName}
+                </span>{" "}
+                ·{" "}
+              </>
+            )}
+            {card.publishedAt && formatDate(card.publishedAt, locale)}
+          </p>
+        </div>
+      </Link>
+    </article>
+  );
+}
 
 export default async function HomePage({
   params,
@@ -42,9 +81,7 @@ export default async function HomePage({
   const dbLocale = appLocale as Locale;
   const dict = await getDictionary(appLocale);
 
-  // The hero prefers a featured article; find its id first (cheap),
-  // then fetch the top cards. If a featured story exists it becomes
-  // the lead and is excluded from the rest so nothing repeats.
+  // Featured lead (falls back to newest).
   const featured = await prisma.article.findFirst({
     where: {
       status: ArticleStatus.PUBLISHED,
@@ -55,96 +92,185 @@ export default async function HomePage({
     select: { id: true },
   });
 
-  // One list feeds hero (if no featured) + secondary rail + latest
-  // strip. Fetch a couple extra to backfill when the featured lead
-  // is pulled out of the pool.
-  const [{ cards: pool }, bands] = await Promise.all([
-    fetchArticleCards({ locale: dbLocale, page: 1, pageSize: 10 }),
-    sectionBands(dbLocale, { bandCount: 4, perBand: 4 }),
-  ]);
+  const { cards: pool } = await fetchArticleCards({
+    locale: dbLocale,
+    page: 1,
+    pageSize: 20,
+  });
 
   if (pool.length === 0 && !featured) {
-    return (
-      <p className="py-24 text-center text-ink-soft">{dict.home.empty}</p>
-    );
+    return <p className="py-24 text-center text-ink-muted">{dict.home.empty}</p>;
   }
 
-  // Resolve the lead: the featured card if present (it may or may not
-  // already be in `pool`), otherwise the newest article.
+  // Resolve lead + remaining pool (no repeats).
   let lead: ArticleCard;
   let rest: ArticleCard[];
   const featuredCard = featured
     ? pool.find((c) => c.id === featured.id)
     : undefined;
-
-  if (featured && featuredCard) {
+  if (featuredCard) {
     lead = featuredCard;
-    rest = pool.filter((c) => c.id !== featured.id);
-  } else if (featured && !featuredCard) {
-    // Featured article is older than the top 10 — fetch it directly.
-    const [{ cards: leadOnly }] = await Promise.all([
-      fetchArticleCards({
-        locale: dbLocale,
-        where: { id: featured.id },
-        page: 1,
-        pageSize: 1,
-      }),
-    ]);
-    lead = leadOnly[0] ?? pool[0];
+    rest = pool.filter((c) => c.id !== featuredCard.id);
+  } else if (featured) {
+    const { cards } = await fetchArticleCards({
+      locale: dbLocale,
+      where: { id: featured.id },
+      page: 1,
+      pageSize: 1,
+    });
+    lead = cards[0] ?? pool[0];
     rest = pool.filter((c) => c.id !== lead.id);
   } else {
     lead = pool[0];
     rest = pool.slice(1);
   }
 
-  const secondary = rest.slice(0, 4); // up to 4 stacked headlines
-  const latest = rest.slice(4, 8); // up to 4 compact cards
+  // Slice the remaining pool into the page's sections.
+  const latest = rest.slice(0, 5); // left column headlines
+  const opinion = rest.slice(5, 8); // right column cards
+  const watch = rest.slice(8, 11); // multimedia band (needs covers)
+  const more = rest.slice(11, 17); // bento grid
+
+  const href = (slug: string) => `/${appLocale}/article/${slug}`;
 
   return (
     <div>
-      <LeadStory
-        lead={lead}
-        secondary={secondary}
-        locale={appLocale}
-        labels={dict.article}
-      />
-
-      <LatestStrip
-        cards={latest}
-        locale={appLocale}
-        labels={dict.article}
-        heading={dict.home.latestNews}
-      />
-
-      {/* Section bands beside the sticky trending rail */}
-      <div className="grid gap-x-10 lg:grid-cols-[1fr_320px]">
-        <div className="min-w-0">
-          {bands.map((band, i) => (
-            <SectionBand
-              key={band.slug}
-              name={band.name}
-              slug={band.slug}
-              cards={band.cards}
-              locale={appLocale}
-              labels={dict.article}
-              seeAll={dict.nav.seeAll}
-              // Alternate rhythm: lead layout on even bands, grid on odd.
-              variant={i % 2 === 0 ? "lead" : "grid"}
-            />
-          ))}
+      {/* 1. Three columns: Latest / Lead / Opinion */}
+      <section className="grid gap-10 lg:grid-cols-[0.85fr_1.6fr_0.85fr]">
+        {/* Latest */}
+        <div className="order-2 lg:order-1">
+          <h2 className="mb-5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">
+            {dict.home.latestNews}
+          </h2>
+          <ul className="space-y-5">
+            {latest.map((a) => (
+              <li key={a.id}>
+                <Link href={href(a.slug)} className="block">
+                  <Kicker name={a.categoryName} />
+                  <h3 className="mt-1 text-[15px] font-semibold leading-snug text-ink">
+                    {a.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    {a.publishedAt && formatDate(a.publishedAt, appLocale)}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Sticky rail — follows through the section bands */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-24">
-            <TrendingSidebar
-              locale={appLocale}
-              title={dict.home.mostRead}
-              limit={6}
-            />
+        {/* Lead */}
+        <div className="order-1 lg:order-2">
+          <LeadStory card={lead} locale={appLocale} />
+        </div>
+
+        {/* Opinion */}
+        <div className="order-3">
+          <h2 className="mb-5 text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">
+            Opinion
+          </h2>
+          <ul className="space-y-5">
+            {opinion.map((a) => (
+              <li key={a.id} className="rounded-2xl bg-surface p-5">
+                <Link href={href(a.slug)} className="block">
+                  <h3 className="text-[15px] font-semibold leading-snug text-ink">
+                    {a.title}
+                  </h3>
+                  {a.authorName && (
+                    <p className="mt-2 text-xs italic text-ink-muted">
+                      by {a.authorName}
+                    </p>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 2. Multimedia band — warm surface, play affordance (option b) */}
+      {watch.length > 0 && (
+        <section className="mt-16 rounded-3xl bg-wood px-6 py-8 sm:px-8">
+          <h2 className="mb-6 text-lg font-bold tracking-tight text-ink">
+            {dict.home.watch ?? "Watch"}
+          </h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {watch.map((v) => (
+              <Link key={v.id} href={href(v.slug)} className="group block">
+                <div className="relative overflow-hidden rounded-2xl">
+                  {v.cover && (
+                    <div className="relative aspect-video">
+                      <Image
+                        src={v.cover.url}
+                        alt={v.cover.altText ?? ""}
+                        fill
+                        sizes="(min-width:768px) 30vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      />
+                    </div>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-canvas/90 transition-transform group-hover:scale-110">
+                      <Play
+                        className="ms-0.5 h-6 w-6 text-ink"
+                        fill="currentColor"
+                        aria-hidden
+                      />
+                    </span>
+                  </span>
+                </div>
+                <h3 className="mt-3 text-[15px] font-semibold leading-snug text-ink">
+                  {v.title}
+                </h3>
+              </Link>
+            ))}
           </div>
-        </aside>
-      </div>
+        </section>
+      )}
+
+      {/* 3. More stories — bento grid */}
+      {more.length > 0 && (
+        <section className="mt-16">
+          <h2 className="mb-6 text-lg font-bold tracking-tight text-ink">
+            {dict.home.moreStories ?? "More stories"}
+          </h2>
+          <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {more.map((a) => (
+              <Link key={a.id} href={href(a.slug)} className="group block">
+                {a.cover && (
+                  <div className="overflow-hidden rounded-2xl">
+                    <div className="relative aspect-[16/10]">
+                      <Image
+                        src={a.cover.url}
+                        alt={a.cover.altText ?? ""}
+                        fill
+                        sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="mt-4">
+                  <Kicker name={a.categoryName} />
+                  <h3 className="mt-1.5 text-lg font-semibold leading-snug tracking-tight text-ink">
+                    {a.title}
+                  </h3>
+                  {a.excerpt && (
+                    <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                      {a.excerpt}
+                    </p>
+                  )}
+                  <p className="mt-3 text-xs text-ink-muted">
+                    {a.publishedAt && formatDate(a.publishedAt, appLocale)}
+                    {" · "}
+                    {a.readingTime} {dict.article.minRead}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

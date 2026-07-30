@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "tailwind.config.ts"  ],
+, "tailwind.config.ts", "src/server/services/navigation.ts"  ],
   "exclude": ["node_modules"]
 }

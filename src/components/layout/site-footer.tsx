@@ -27,13 +27,13 @@ export function SiteFooter({
     "block py-1 text-sm text-ink-soft transition-colors hover:text-brand";
 
   return (
-    <footer className="mt-16 border-t border-line bg-surface">
+    <footer className="mt-16 border-t border-hair bg-surface">
       <div className="mx-auto max-w-6xl px-4 py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand + newsletter (spans 2) */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-white">
                 <Newspaper className="h-4 w-4" aria-hidden />
               </span>
               <span className="font-serif text-lg font-bold text-ink">
@@ -62,11 +62,11 @@ export function SiteFooter({
                   type="email"
                   required
                   placeholder={dict.footer.emailPlaceholder}
-                  className="min-w-0 flex-1 rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  className="min-w-0 flex-1 rounded-md border border-hair bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                 />
                 <button
                   type="submit"
-                  className="shrink-0 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+                  className="shrink-0 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
                 >
                   {dict.footer.subscribe}
                 </button>
@@ -114,7 +114,7 @@ export function SiteFooter({
         </div>
 
         {/* Legal row */}
-        <div className="mt-10 border-t border-line pt-6 text-center text-xs text-ink-muted">
+        <div className="mt-10 border-t border-hair pt-6 text-center text-xs text-ink-muted">
           © {new Date().getFullYear()} {dict.site.name}. {dict.footer.rights}
         </div>
       </div>

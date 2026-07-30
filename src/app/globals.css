@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
  
 /**
  * Claude / Linear / Vercel-class palette.
@@ -28,6 +27,43 @@
   --c-accent: 91 91 214;         /* #5b5bd6 */
   --c-accent-hover: 75 75 196;   /* #4b4bc4 */
   --c-accent-soft: 238 238 251;  /* #eeeefb */
+
+  --c-canvas: 250 247 242;    /* #FAF7F2 */
+  --c-surface: 255 253 249;   /* #FFFDF9 */
+  --c-wood: 240 233 222;      /* #F0E9DE */
+ 
+  --c-ink: 46 42 36;          /* #2E2A24 */
+  --c-ink-soft: 107 99 87;    /* #6B6357 */
+  --c-ink-muted: 138 129 113; /* #8A8171 */
+ 
+  --c-hair: 239 231 217;      /* #EFE7D9 */
+  --c-ring: 231 222 206;      /* #E7DECE */
+ 
+  --c-sage: 107 127 91;       /* #6B7F5B */
+  --c-sage-hover: 92 111 77;  /* #5C6F4D */
+  --c-sage-soft: 237 240 230; /* #EDF0E6 */
+ 
+  --c-terra: 176 103 74;      /* #B0674A */
+  --c-terra-soft: 245 231 222;/* #F5E7DE */
+ 
+  --c-amber: 154 123 79;      /* #9A7B4F */
+  --c-amber-soft: 240 231 216;/* #F0E7D8 */
+
+  --c-canvas: 250 247 242;
+  --c-surface: 255 253 249;
+  --c-wood: 240 233 222;
+  --c-ink: 46 42 36;
+  --c-ink-soft: 107 99 87;
+  --c-ink-muted: 138 129 113;
+  --c-hair: 239 231 217;
+  --c-ring: 231 222 206;
+  --c-sage: 107 127 91;
+  --c-sage-hover: 92 111 77;
+  --c-sage-soft: 237 240 230;
+  --c-terra: 176 103 74;
+  --c-terra-soft: 245 231 222;
+  --c-amber: 154 123 79;
+  --c-amber-soft: 240 231 216;
 }
  
 @layer base {

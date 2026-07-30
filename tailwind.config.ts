@@ -1,17 +1,5 @@
 import type { Config } from "tailwindcss";
  
-/**
- * Claude / Linear / Vercel-class token system.
- *
- * Restraint-first: clean neutral surfaces, one calm indigo accent
- * for interaction, a warm sand tint reserved for occasional soft
- * surfaces (never as a loud background). Deliberately NOT the
- * terracotta #D97757 — that reads as an AI-generated default.
- *
- * Tokens are CSS variables (globals.css) exposed with
- * rgb(var(--token) / <alpha-value>) so opacity modifiers work:
- * bg-canvas/70 for the frosted header, ring-hair/60, etc.
- */
 const withAlpha = (v: string) => `rgb(var(${v}) / <alpha-value>)`;
  
 const config: Config = {
@@ -19,53 +7,51 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Surfaces
-        canvas: withAlpha("--c-canvas"), // #fafafa app background
-        surface: withAlpha("--c-surface"), // #ffffff cards
-        sand: withAlpha("--c-sand"), // #f5f1ea warm tint
+        canvas: withAlpha("--c-canvas"),   // #FAF7F2 page bg
+        surface: withAlpha("--c-surface"), // #FFFDF9 lifted cards
+        wood: withAlpha("--c-wood"),       // #F0E9DE warm band surface
  
-        // Text
         ink: {
-          DEFAULT: withAlpha("--c-ink"), // #27272a headings
-          soft: withAlpha("--c-ink-soft"), // #52525b body
-          muted: withAlpha("--c-ink-muted"), // #71717a captions
+          DEFAULT: withAlpha("--c-ink"),      // #2E2A24
+          soft: withAlpha("--c-ink-soft"),    // #6B6357
+          muted: withAlpha("--c-ink-muted"),  // #8A8171
         },
  
-        // Lines
-        hair: withAlpha("--c-hair"), // #f4f4f5 subtle borders
-        ring: withAlpha("--c-ring"), // #e4e4e7 defined rings
+        hair: withAlpha("--c-hair"), // #EFE7D9 (rarely used now)
+        ring: withAlpha("--c-ring"), // #E7DECE
  
-        // Accent — calm indigo
-        accent: {
-          DEFAULT: withAlpha("--c-accent"), // #5b5bd6
-          hover: withAlpha("--c-accent-hover"), // #4b4bc4
-          soft: withAlpha("--c-accent-soft"), // #eeeefb tint
+        sage: {
+          DEFAULT: withAlpha("--c-sage"),
+          hover: withAlpha("--c-sage-hover"),
+          soft: withAlpha("--c-sage-soft"),
+        },
+        terracotta: {
+          DEFAULT: withAlpha("--c-terra"),
+          soft: withAlpha("--c-terra-soft"),
+        },
+        amber: {
+          DEFAULT: withAlpha("--c-amber"),
+          soft: withAlpha("--c-amber-soft"),
         },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        // Serif is reserved for article body only.
-        serif: ["var(--font-serif)", "Georgia", "serif"],
+        serif: ["var(--font-serif)", "Georgia", "serif"], // article body only
         arabic: ["var(--font-arabic)", "sans-serif"],
       },
-      borderRadius: {
-        "4xl": "2rem",
-      },
+      borderRadius: { "3xl": "1.5rem", "4xl": "2rem" },
       boxShadow: {
-        // Soft, diffuse — never harsh.
-        soft: "0 1px 2px 0 rgb(0 0 0 / 0.03), 0 4px 16px -4px rgb(0 0 0 / 0.06)",
-        lift: "0 8px 32px -8px rgb(0 0 0 / 0.12)",
+        soft: "0 1px 2px 0 rgb(59 53 46 / 0.04), 0 6px 20px -6px rgb(59 53 46 / 0.08)",
+        lift: "0 10px 36px -10px rgb(59 53 46 / 0.16)",
       },
       typography: () => ({
         DEFAULT: {
           css: {
             "--tw-prose-body": "rgb(var(--c-ink-soft))",
             "--tw-prose-headings": "rgb(var(--c-ink))",
-            "--tw-prose-links": "rgb(var(--c-accent))",
+            "--tw-prose-links": "rgb(var(--c-sage))",
             "--tw-prose-quotes": "rgb(var(--c-ink-soft))",
-            "--tw-prose-quote-borders": "rgb(var(--c-accent-soft))",
-            "--tw-prose-bullets": "rgb(var(--c-ring))",
-            "--tw-prose-hr": "rgb(var(--c-hair))",
+            "--tw-prose-quote-borders": "rgb(var(--c-sage-soft))",
             "--tw-prose-captions": "rgb(var(--c-ink-muted))",
             maxWidth: "none",
           },
@@ -77,4 +63,3 @@ const config: Config = {
 };
  
 export default config;
- 
