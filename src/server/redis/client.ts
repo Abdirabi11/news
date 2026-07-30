@@ -42,11 +42,6 @@ export const createBullConnection = (): Redis =>
     enableReadyCheck: false,
   });
  
-/**
- * Centralized key naming. Every Redis key used anywhere in the app
- * must come from here — prevents silent key-format drift between the
- * web app and the worker process.
- */
 export const redisKeys = {
   /** HINCRBY buffer of pending views, flushed to PG by BullMQ. */
   pendingViews: () => "views:pending",
