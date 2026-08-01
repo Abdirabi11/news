@@ -1,99 +1,122 @@
-/**
- * Object storage service (Cloudflare R2 / S3-compatible).
- *
- * Upload flow (presigned, so files never pass through our server):
- *   1. Client: POST /api/media/presign {filename, mimeType, sizeBytes}
- *   2. Server: validates, returns {uploadUrl, storageKey}
- *   3. Client: PUT file bytes to uploadUrl
- *   4. Client: POST /api/media {storageKey, ...metadata}
- *      → Media row created; thumbnail job enqueued in Phase 3.
- *
- * Requires: npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
- *
- * Env:
- *   STORAGE_ENDPOINT           e.g. https://<account>.r2.cloudflarestorage.com
- *   STORAGE_REGION             "auto" for R2
- *   STORAGE_BUCKET
- *   STORAGE_ACCESS_KEY_ID
- *   STORAGE_SECRET_ACCESS_KEY
- *   CDN_BASE_URL               public base, e.g. https://media.example.com
- */
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { randomUUID } from "node:crypto";
- 
-const required = (name: string): string => {
+import crypto from "crypto";
+
+function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required env var: ${name}`);
   return v;
-};
- 
-let _client: S3Client | null = null;
-const s3 = (): S3Client => {
-  _client ??= new S3Client({
-    endpoint: required("STORAGE_ENDPOINT"),
-    region: process.env.STORAGE_REGION ?? "auto",
-    credentials: {
-      accessKeyId: required("STORAGE_ACCESS_KEY_ID"),
-      secretAccessKey: required("STORAGE_SECRET_ACCESS_KEY"),
-    },
-  });
-  return _client;
-};
- 
-export const ALLOWED_IMAGE_TYPES = new Set([
+}
+
+export function cloudinaryConfig() {
+  return {
+    cloudName: requireEnv("CLOUDINARY_CLOUD_NAME"),
+    apiKey: requireEnv("CLOUDINARY_API_KEY"),
+    apiSecret: requireEnv("CLOUDINARY_API_SECRET"),
+  };
+}
+
+export interface SignedUpload {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  folder: string;
+  uploadUrl: string;
+}
+
+/**
+ * Produce a signature for a direct browser upload.
+ *
+ * Cloudinary signs the alphabetically-sorted set of params that will
+ * be sent (excluding file, api_key, resource_type, cloud_name), joined
+ * as key=value&key=value, with the api_secret appended, hashed SHA-1.
+ *
+ * We keep the signed param set deliberately small and fixed (folder +
+ * timestamp) so the client cannot smuggle in extra signed params.
+ */
+export function signUpload(opts: { folder?: string } = {}): SignedUpload {
+  const { cloudName, apiKey, apiSecret } = cloudinaryConfig();
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = opts.folder ?? "newsroom";
+
+  // Params to sign, sorted alphabetically by key.
+  const toSign: Record<string, string | number> = { folder, timestamp };
+  const signatureBase = Object.keys(toSign)
+    .sort()
+    .map((k) => `${k}=${toSign[k]}`)
+    .join("&");
+
+  const signature = crypto
+    .createHash("sha1")
+    .update(signatureBase + apiSecret)
+    .digest("hex");
+
+  return {
+    cloudName,
+    apiKey,
+    timestamp,
+    signature,
+    folder,
+    uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+  };
+}
+
+/**
+ * Shape of the Cloudinary upload response fields we care about.
+ * (Cloudinary returns many more; these map cleanly to our Media model.)
+ */
+export interface CloudinaryAsset {
+  secure_url: string;
+  public_id: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+  format: string;
+  resource_type: string;
+}
+
+/**
+ * Map a Cloudinary asset to our Media create-input shape. The caller
+ * supplies uploaderId + optional altText/caption. public_id becomes
+ * our storageKey (unique), secure_url our url.
+ */
+export function assetToMediaInput(
+  asset: CloudinaryAsset,
+  uploaderId: string,
+  extra: { altText?: string; caption?: string } = {},
+) {
+  return {
+    uploaderId,
+    storageKey: asset.public_id,
+    url: asset.secure_url,
+    mimeType: `${asset.resource_type}/${asset.format}`,
+    sizeBytes: asset.bytes,
+    width: asset.width ?? null,
+    height: asset.height ?? null,
+    altText: extra.altText ?? null,
+    caption: extra.caption ?? null,
+    processed: true, // Cloudinary handles derivations on the fly
+  };
+}
+
+
+export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
-  "image/avif",
   "image/gif",
-]);
- 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
- 
-const EXT_BY_MIME: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/avif": "avif",
-  "image/gif": "gif",
-};
- 
+  "image/avif",
+];
+
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
+
 /**
- * Build a collision-proof storage key. The original filename is
- * reduced to a short sanitized stem (for human-readable URLs); the
- * UUID guarantees uniqueness; the extension comes from the DECLARED
- * mime type, never from the user-supplied filename.
+ * Ensures compatibility with existing API routes that expect a publicUrl helper.
  */
-export const buildStorageKey = (filename: string, mimeType: string): string => {
-  const stem =
-    filename
-      .toLowerCase()
-      .replace(/\.[^.]*$/, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "upload";
-  return `uploads/${randomUUID()}/${stem}.${EXT_BY_MIME[mimeType] ?? "bin"}`;
-};
- 
-/** Presigned PUT URL, bound to key + content type, 10-minute TTL. */
-export const presignUpload = async (
-  storageKey: string,
-  mimeType: string,
-  sizeBytes: number,
-): Promise<string> =>
-  getSignedUrl(
-    s3(),
-    new PutObjectCommand({
-      Bucket: required("STORAGE_BUCKET"),
-      Key: storageKey,
-      ContentType: mimeType,
-      ContentLength: sizeBytes,
-    }),
-    { expiresIn: 600 },
-  );
- 
-/** Public CDN URL for a stored object. */
-export const publicUrl = (storageKey: string): string =>
-  `${required("CDN_BASE_URL").replace(/\/$/, "")}/${storageKey}`;
- 
+export function publicUrl(storageKeyOrUrl: string) {
+  // If it's already a full Cloudinary URL, just return it
+  if (storageKeyOrUrl.startsWith("http")) return storageKeyOrUrl;
+  
+  // Otherwise, construct the Cloudinary URL from the public_id
+  const { cloudName } = cloudinaryConfig();
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${storageKeyOrUrl}`;
+}

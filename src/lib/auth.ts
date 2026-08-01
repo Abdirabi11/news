@@ -9,7 +9,7 @@ import { prisma } from "@/server/db/client";
  
 const credentialsSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(1),
 });
  
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -19,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     maxAge: 60 * 60 * 24 * 7, // 7 days
   },
   pages: {
-    signIn: "/login", // built in Phase 4 (editorial UI)
+    signIn: "/login", // locale-prefixed at runtime
   },
   providers: [
     Credentials({
@@ -44,8 +44,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
  
-        // Whatever is returned here is passed to the jwt() callback
-        // as `user` on initial sign-in.
         return {
           id: user.id,
           email: user.email,
@@ -58,14 +56,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
-      // Initial sign-in: copy id + role from the authorize() result.
       if (user) {
         token.id = user.id as string;
-        token.role = user.role;
+        token.role = (user as { role: Role }).role;
       }
-      // Optional hardening: re-read the role from the DB when the
-      // client calls `update()`, so demotions take effect without
-      // waiting for token expiry.
       if (trigger === "update" && token.id) {
         const fresh = await prisma.user.findUnique({
           where: { id: token.id },
@@ -77,8 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as Role;
       }
       return session;
     },
@@ -100,17 +94,6 @@ export type GuardResult =
   | { ok: true; user: SessionUser }
   | { ok: false; response: NextResponse };
  
-/**
- * Route Handler / Server Action guard.
- *
- * Usage:
- *   const guard = await requireRole([Role.ADMIN, Role.EDITOR]);
- *   if (!guard.ok) return guard.response;
- *   // guard.user is now typed and authorized
- *
- * Returns a discriminated union instead of throwing, so handlers
- * stay linear and no try/catch plumbing is needed.
- */
 export async function requireRole(allowed: Role[]): Promise<GuardResult> {
   const session = await auth();
  
@@ -124,7 +107,7 @@ export async function requireRole(allowed: Role[]): Promise<GuardResult> {
     };
   }
  
-  if (!allowed.includes(session.user.role)) {
+  if (!allowed.includes(session.user.role as Role)) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -138,14 +121,12 @@ export async function requireRole(allowed: Role[]): Promise<GuardResult> {
     ok: true,
     user: {
       id: session.user.id,
-      role: session.user.role,
+      role: session.user.role as Role,
       email: session.user.email,
       name: session.user.name,
     },
   };
 }
  
-/** Convenience wrapper: any signed-in user (Reader and up). */
 export const requireUser = () =>
   requireRole([Role.ADMIN, Role.EDITOR, Role.AUTHOR, Role.READER]);
- 

@@ -24,4 +24,7 @@ export async function trackView(articleId: string): Promise<void> {
     console.error("[views] failed to track view:", err);
   }
 }
+
+
+
  

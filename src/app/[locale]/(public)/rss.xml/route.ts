@@ -1,12 +1,3 @@
-/**
- * /{locale}/rss.xml — RSS 2.0 feed, latest 20 published articles in
- * the requested locale.
- *
- * dc:creator carries the byline (the Dublin Core namespace is the
- * standard way to put authors in RSS 2.0 without abusing <author>,
- * which formally requires an email address). Cached 15 minutes via
- * segment revalidation.
- */
 import { notFound } from "next/navigation";
 import { Locale, ArticleStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
