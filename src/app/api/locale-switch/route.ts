@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Locale } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { isAppLocale } from "@/i18n";
+import { DEFAULT_LOCALE, isAppLocale, localeHref, type AppLocale } from "@/i18n";
  
 export const dynamic = "force-dynamic";
  
@@ -33,21 +33,26 @@ export async function GET(req: NextRequest) {
  
   const redirect = (path: string) =>
     NextResponse.redirect(new URL(path, req.url), 307);
-  const home = `/${to}`;
- 
+  const home = localeHref(to, "/");
+
   // Only ever treat `path` as an internal path (no open redirects).
   if (!rawPath.startsWith("/") || rawPath.startsWith("//")) {
     return redirect(home);
   }
- 
+
   const [pathname, query = ""] = rawPath.split("?");
-  const segments = pathname.split("/").filter(Boolean); // [locale, kind, slug?]
-  const from = segments[0];
- 
-  if (!isAppLocale(from) || from === to) return redirect(home);
- 
-  const kind = segments[1];
-  const slug = segments[2] ? decodeURIComponent(segments[2]) : undefined;
+  const segments = pathname.split("/").filter(Boolean); // [locale?, kind, slug?]
+
+  // Under prefix-except-default, the default locale (en) has NO prefix
+  // segment — "/category/x" is already an "en" path, not an invalid one.
+  const hasPrefix = isAppLocale(segments[0]);
+  const from: AppLocale = hasPrefix ? (segments[0] as AppLocale) : DEFAULT_LOCALE;
+  const rest = hasPrefix ? segments.slice(1) : segments;
+
+  if (from === to) return redirect(home);
+
+  const kind = rest[0];
+  const slug = rest[1] ? decodeURIComponent(rest[1]) : undefined;
  
   try {
     if (kind === "article" && slug) {
@@ -65,7 +70,7 @@ export async function GET(req: NextRequest) {
           },
           select: { slug: true },
         });
-        if (sibling) return redirect(`/${to}/article/${sibling.slug}`);
+        if (sibling) return redirect(localeHref(to, `/article/${sibling.slug}`));
       }
       return redirect(home);
     }
@@ -85,7 +90,7 @@ export async function GET(req: NextRequest) {
           },
           select: { slug: true },
         });
-        if (sibling) return redirect(`/${to}/category/${sibling.slug}`);
+        if (sibling) return redirect(localeHref(to, `/category/${sibling.slug}`));
       }
       return redirect(home);
     }
@@ -102,18 +107,18 @@ export async function GET(req: NextRequest) {
           },
           select: { slug: true },
         });
-        if (sibling) return redirect(`/${to}/tag/${sibling.slug}`);
+        if (sibling) return redirect(localeHref(to, `/tag/${sibling.slug}`));
       }
       return redirect(home);
     }
  
     if (kind === "author" && slug) {
       // authorSlug is global — same profile, new locale.
-      return redirect(`/${to}/author/${slug}`);
+      return redirect(localeHref(to, `/author/${slug}`));
     }
- 
+
     if (kind === "search") {
-      return redirect(`/${to}/search${query ? `?${query}` : ""}`);
+      return redirect(localeHref(to, `/search${query ? `?${query}` : ""}`));
     }
   } catch (err) {
     console.error("[locale-switch]", err);

@@ -1,20 +1,9 @@
 "use client";
 
-/**
- * HeaderNav — the interactive parts of the minimal header.
- *
- * Client island for: the search toggle (icon expands to a field) and
- * the mobile menu (a clean dropdown panel, no heavy off-canvas
- * drawer — this aesthetic favors calm over drama). Category links
- * are passed in from the server.
- *
- * Everything logical-property based for RTL. Deliberately sparse:
- * the whole point of the pivot is breathing room.
- */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Search, Menu, X } from "lucide-react";
-import { LOCALES, type AppLocale, type Dictionary } from "@/i18n";
+import { LOCALES, localeHref, type AppLocale, type Dictionary } from "@/i18n";
 
 export interface NavLink {
   name: string;
@@ -59,7 +48,7 @@ export function HeaderNav({
         {links.map((l) => (
           <Link
             key={l.slug}
-            href={`/${locale}/category/${l.slug}`}
+            href={localeHref(locale, `/category/${l.slug}`)}
             className="rounded-full px-3.5 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
           >
             {l.name}
@@ -71,7 +60,7 @@ export function HeaderNav({
       <div className="flex items-center gap-1">
         {searchOpen ? (
           <form
-            action={`/${locale}/search`}
+            action={localeHref(locale, "/search")}
             method="GET"
             className="flex items-center"
           >
@@ -126,7 +115,7 @@ export function HeaderNav({
             {links.map((l) => (
               <Link
                 key={l.slug}
-                href={`/${locale}/category/${l.slug}`}
+                href={localeHref(locale, `/category/${l.slug}`)}
                 onClick={() => setMenuOpen(false)}
                 className="block rounded-xl px-4 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-canvas hover:text-ink"
               >
@@ -138,7 +127,7 @@ export function HeaderNav({
               {LOCALES.map((l) => (
                 <Link
                   key={l}
-                  href={`/${l}`}
+                  href={localeHref(l, "/")}
                   onClick={() => setMenuOpen(false)}
                   className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${
                     l === locale

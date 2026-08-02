@@ -5,7 +5,14 @@ import type { Metadata } from "next";
 import { Locale, ArticleStatus } from "@prisma/client";
 import { type JSONContent } from "@tiptap/react";
 import { prisma } from "@/server/db/client";
-import { getDictionary, formatDate, isAppLocale, type AppLocale } from "@/i18n";
+import {
+  getDictionary,
+  formatDate,
+  isAppLocale,
+  localeHref,
+  localeUrl,
+  type AppLocale,
+} from "@/i18n";
 import { RichContent } from "@/components/article/rich-content";
 import { ViewTracker } from "@/components/article/view-tracker";
 import { NewsArticleJsonLd } from "@/components/seo/news-article-jsonld";
@@ -66,13 +73,13 @@ export async function generateMetadata({
   if (!t) return {};
 
   const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
-  const url = `${siteUrl}/${locale}/article/${t.slug}`;
+  const url = localeUrl(siteUrl, locale as AppLocale, `/article/${t.slug}`);
 
   // hreflang alternates, built from sibling translations.
   const languages = Object.fromEntries(
     t.article.translations.map((sibling) => [
       sibling.locale,
-      `${siteUrl}/${sibling.locale}/article/${sibling.slug}`,
+      localeUrl(siteUrl, sibling.locale as AppLocale, `/article/${sibling.slug}`),
     ]),
   );
 
@@ -128,7 +135,7 @@ export default async function ArticlePage({
   const category = article.category?.translations[0] ?? null;
 
   const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
-  const url = `${siteUrl}/${appLocale}/article/${t.slug}`;
+  const url = localeUrl(siteUrl, appLocale, `/article/${t.slug}`);
   const jsonLdImages = [t.ogImageUrl ?? article.coverImage?.url].filter(
     (v): v is string => Boolean(v),
   );
@@ -149,7 +156,7 @@ export default async function ArticlePage({
         authorName={article.author.name ?? undefined}
         authorUrl={
           article.author.authorSlug
-            ? `${siteUrl}/${appLocale}/author/${article.author.authorSlug}`
+            ? localeUrl(siteUrl, appLocale, `/author/${article.author.authorSlug}`)
             : undefined
         }
         locale={appLocale}
@@ -165,7 +172,7 @@ export default async function ArticlePage({
         )}
         {category && (
           <Link
-            href={`/${appLocale}/category/${category.slug}`}
+            href={localeHref(appLocale, `/category/${category.slug}`)}
             className="text-indigo-700 hover:underline"
           >
             {category.name}
@@ -199,7 +206,7 @@ export default async function ArticlePage({
               {dict.article.by}{" "}
               {article.author.authorSlug ? (
                 <Link
-                  href={`/${appLocale}/author/${article.author.authorSlug}`}
+                  href={localeHref(appLocale, `/author/${article.author.authorSlug}`)}
                   className="hover:text-indigo-700 hover:underline"
                 >
                   {article.author.name}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { type ArticleCard } from "@/server/services/article-cards";
-import { formatDate, type AppLocale, type Dictionary } from "@/i18n";
+import { formatDate, localeHref, type AppLocale, type Dictionary } from "@/i18n";
 
 interface ArticleListCardProps {
   card: ArticleCard;
@@ -17,7 +17,7 @@ export function ArticleListCard({
   labels,
   hideCategory = false,
 }: ArticleListCardProps) {
-  const href = `/${locale}/article/${card.slug}`;
+  const href = localeHref(locale, `/article/${card.slug}`);
 
   return (
     <article className="group flex gap-4 py-5 sm:gap-6">
@@ -47,7 +47,7 @@ export function ArticleListCard({
           )}
           {!hideCategory && card.categoryName && card.categorySlug && (
             <Link
-              href={`/${locale}/category/${card.categorySlug}`}
+              href={localeHref(locale, `/category/${card.categorySlug}`)}
               className="text-indigo-700 hover:underline"
             >
               {card.categoryName}
@@ -73,7 +73,7 @@ export function ArticleListCard({
               {labels.by}{" "}
               {card.authorSlug ? (
                 <Link
-                  href={`/${locale}/author/${card.authorSlug}`}
+                  href={localeHref(locale, `/author/${card.authorSlug}`)}
                   className="font-medium text-zinc-600 hover:text-indigo-700"
                 >
                   {card.authorName}

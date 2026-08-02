@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { searchArticleCards } from "@/server/services/article-cards";
 import { ArticleListCard } from "@/components/article/article-card";
 import { Pagination } from "@/components/article/pagination";
-import { getDictionary, isAppLocale, type AppLocale } from "@/i18n";
+import { getDictionary, isAppLocale, localeHref, type AppLocale } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,7 @@ export default async function SearchPage({
       </h1>
 
       {/* Plain GET form — zero client JS */}
-      <form action={`/${appLocale}/search`} method="GET" className="mt-5 flex gap-2">
+      <form action={localeHref(appLocale, "/search")} method="GET" className="mt-5 flex gap-2">
         <label htmlFor="q" className="sr-only">
           {dict.search.title}
         </label>
@@ -110,7 +110,7 @@ export default async function SearchPage({
           )}
 
           <Pagination
-            basePath={`/${appLocale}/search?q=${encodeURIComponent(q)}`}
+            basePath={localeHref(appLocale, `/search?q=${encodeURIComponent(q)}`)}
             page={page}
             totalPages={results.totalPages}
           />

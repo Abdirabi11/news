@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Locale, ArticleStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { getDictionary, isAppLocale } from "@/i18n";
+import { getDictionary, isAppLocale, localeUrl } from "@/i18n";
  
 export const revalidate = 900;
  
@@ -51,12 +51,12 @@ export async function GET(
     },
   });
  
-  const feedUrl = `${siteUrl}/${locale}/rss.xml`;
-  const homeUrl = `${siteUrl}/${locale}`;
- 
+  const feedUrl = localeUrl(siteUrl, locale, "/rss.xml");
+  const homeUrl = localeUrl(siteUrl, locale, "/");
+
   const items = translations
     .map((t) => {
-      const link = `${siteUrl}/${locale}/article/${t.slug}`;
+      const link = localeUrl(siteUrl, locale, `/article/${t.slug}`);
       const category = t.article.category?.translations[0]?.name;
       return `    <item>
       <title>${escapeXml(t.title)}</title>
@@ -78,7 +78,6 @@ export async function GET(
     <title>${escapeXml(dict.site.name)}</title>
     <link>${homeUrl}</link>
     <description>${escapeXml(dict.site.tagline)}</description>
-    <language>${locale}</language>
     <atom:link href="${feedUrl}" rel="self" type="application/rss+xml"/>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
 ${items}
@@ -89,4 +88,3 @@ ${items}
     headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
   });
 }
- 

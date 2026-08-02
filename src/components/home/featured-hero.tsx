@@ -11,7 +11,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import type { ArticleCard } from "@/server/services/article-cards";
-import { formatDate, type AppLocale, type Dictionary } from "@/i18n";
+import { formatDate, localeHref, type AppLocale, type Dictionary } from "@/i18n";
 
 export function FeaturedHero({
   card,
@@ -24,7 +24,7 @@ export function FeaturedHero({
 }) {
   return (
     <Link
-      href={`/${locale}/article/${card.slug}`}
+      href={localeHref(locale, `/article/${card.slug}`)}
       className="group block overflow-hidden rounded-4xl border border-hair bg-surface shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
     >
       <div className="grid md:grid-cols-2">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TrendingUp } from "lucide-react";
 import { type Locale } from "@prisma/client";
 import { fetchTrendingCards } from "@/server/services/article-cards";
-import { type AppLocale } from "@/i18n";
+import { localeHref, type AppLocale } from "@/i18n";
 
 interface TrendingSidebarProps {
   locale: AppLocale;
@@ -39,7 +39,7 @@ export async function TrendingSidebar({
               {i + 1}
             </span>
             <Link
-              href={`/${locale}/article/${card.slug}`}
+              href={localeHref(locale, `/article/${card.slug}`)}
               className="min-w-0 text-sm font-medium leading-snug text-zinc-800 hover:text-indigo-800"
             >
               <span className="line-clamp-3">{card.title}</span>

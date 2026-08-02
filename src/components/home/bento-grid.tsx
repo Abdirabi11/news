@@ -10,7 +10,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ArticleCard } from "@/server/services/article-cards";
-import { formatDate, type AppLocale, type Dictionary } from "@/i18n";
+import { formatDate, localeHref, type AppLocale, type Dictionary } from "@/i18n";
 
 function BentoCard({
   card,
@@ -23,7 +23,7 @@ function BentoCard({
 }) {
   return (
     <Link
-      href={`/${locale}/article/${card.slug}`}
+      href={localeHref(locale, `/article/${card.slug}`)}
       className="group flex flex-col overflow-hidden rounded-2xl border border-hair bg-surface shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
     >
       {card.cover && (

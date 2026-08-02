@@ -18,25 +18,26 @@
 import type { MetadataRoute } from "next";
 import { ArticleStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { LOCALES } from "@/i18n";
- 
+import { LOCALES, localeUrl, type AppLocale } from "@/i18n";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
   const entries: MetadataRoute.Sitemap = [];
- 
+
   // ---- Homepages ----
+  // en is canonical at siteUrl itself (no "/en") — prefix-except-default.
   const homeLanguages = Object.fromEntries(
-    LOCALES.map((l) => [l, `${siteUrl}/${l}`]),
+    LOCALES.map((l) => [l, localeUrl(siteUrl, l, "/")]),
   );
   for (const locale of LOCALES) {
     entries.push({
-      url: `${siteUrl}/${locale}`,
+      url: localeUrl(siteUrl, locale, "/"),
       changeFrequency: "hourly",
       priority: 1,
       alternates: { languages: homeLanguages },
     });
   }
- 
+
   // ---- Category pages ----
   const categories = await prisma.category.findMany({
     select: {
@@ -48,12 +49,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const languages = Object.fromEntries(
       category.translations.map((t) => [
         t.locale,
-        `${siteUrl}/${t.locale}/category/${t.slug}`,
+        localeUrl(siteUrl, t.locale as AppLocale, `/category/${t.slug}`),
       ]),
     );
     for (const t of category.translations) {
       entries.push({
-        url: `${siteUrl}/${t.locale}/category/${t.slug}`,
+        url: localeUrl(siteUrl, t.locale as AppLocale, `/category/${t.slug}`),
         lastModified: category.updatedAt,
         changeFrequency: "daily",
         priority: 0.7,
@@ -61,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
   }
- 
+
   // ---- Published articles ----
   const articles = await prisma.article.findMany({
     where: { status: ArticleStatus.PUBLISHED },
@@ -77,12 +78,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const languages = Object.fromEntries(
       article.translations.map((t) => [
         t.locale,
-        `${siteUrl}/${t.locale}/article/${t.slug}`,
+        localeUrl(siteUrl, t.locale as AppLocale, `/article/${t.slug}`),
       ]),
     );
     for (const t of article.translations) {
       entries.push({
-        url: `${siteUrl}/${t.locale}/article/${t.slug}`,
+        url: localeUrl(siteUrl, t.locale as AppLocale, `/article/${t.slug}`),
         lastModified: t.updatedAt,
         changeFrequency: "weekly",
         priority: 0.8,
@@ -90,6 +91,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
   }
- 
+
   return entries;
 }

@@ -1,22 +1,7 @@
-/**
- * SiteHeader — minimal, frosted, single-bar sticky header.
- *
- * The whole "news portal" apparatus (utility bar, masthead, ticker,
- * mega-menu) is gone. What remains: a wordmark, a few clean category
- * links, search, and the locale switcher — floating on frosted glass.
- *
- * Server shell: fetches nav links once, renders the client island
- * (HeaderNav) for the interactive bits and the LocaleSwitcher.
- *
- * Signature: the header is a floating rounded bar with a soft ring
- * and backdrop blur, inset from the viewport edges — it reads as a
- * "panel floating over the page," the Linear/Claude signature, not a
- * full-bleed newspaper masthead.
- */
 import { Suspense } from "react";
 import Link from "next/link";
 import { Locale } from "@prisma/client";
-import { getDictionary, type AppLocale } from "@/i18n";
+import { getDictionary, localeHref, type AppLocale } from "@/i18n";
 import { navSections } from "@/server/services/navigation";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { HeaderNav, type NavLink } from "@/components/layout/header-nav";
@@ -39,7 +24,7 @@ export async function SiteHeader({ locale }: { locale: AppLocale }) {
         <div className="relative flex items-center justify-between gap-4 rounded-full border border-hair bg-surface/70 px-5 py-2.5 shadow-soft backdrop-blur-md">
           {/* Wordmark */}
           <Link
-            href={`/${locale}`}
+            href={localeHref(locale, "/")}
             className="shrink-0 text-lg font-semibold tracking-tight text-ink transition-colors hover:text-accent"
           >
             {dict.site.name}
