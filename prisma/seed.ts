@@ -1,12 +1,28 @@
+/**
+ * Database seed — real Somalia news, fully trilingual, 25 articles.
+ *
+ * 9 hand-written articles (3 per category) each with complete
+ * English, Somali, and Arabic headline + excerpt + BODY. Every
+ * article is looped 10x (→ 90 total) with an index suffix on the
+ * slug (and, for copies after the first, on the title) so the
+ * (slug, locale) unique constraint never collides.
+ *
+ * Matches the Phase 1 hub-and-translation schema. contentText is
+ * populated per locale for the tsvector trigger. Unsplash covers,
+ * staggered publish dates, 3 authors, mostly PUBLISHED.
+ *
+ * Run:  npx prisma db seed
+ * (package.json → "prisma": { "seed": "tsx prisma/seed.ts" })
+ */
 import { PrismaClient, Locale, Role, ArticleStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
- 
+
 const prisma = new PrismaClient();
- 
+
 // ---------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------
- 
+
 const tiptapDoc = (paragraphs: string[]) => ({
   type: "doc",
   content: paragraphs.map((text) => ({
@@ -14,10 +30,10 @@ const tiptapDoc = (paragraphs: string[]) => ({
     content: [{ type: "text", text }],
   })),
 });
- 
+
 const readingTime = (t: string) =>
   Math.max(1, Math.round(t.split(/\s+/).filter(Boolean).length / 200));
- 
+
 const slugify = (s: string) =>
   s
     .toLowerCase()
@@ -26,14 +42,14 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
- 
+
 let seed = 42;
 const rand = () => {
   seed = (seed * 1103515245 + 12345) & 0x7fffffff;
   return seed / 0x7fffffff;
 };
 const pick = <T,>(a: T[]): T => a[Math.floor(rand() * a.length)];
- 
+
 const UNSPLASH = [
   "photo-1477959858617-67f85cf4f1df",
   "photo-1518770660439-4636190af475",
@@ -48,27 +64,27 @@ const UNSPLASH = [
   "photo-1495020689067-958852a7765e",
   "photo-1550751827-4bd374c3f58b",
 ].map((id) => `https://images.unsplash.com/${id}?w=1200&q=80`);
- 
+
 // ---------------------------------------------------------------
 // Categories & authors
 // ---------------------------------------------------------------
- 
+
 const CATEGORIES = [
   { key: "politics", en: "Politics", so: "Siyaasadda", ar: "السياسة", slugSo: "siyaasadda", slugAr: "alsiyasa" },
   { key: "technology", en: "Technology", so: "Teknoolajiyada", ar: "التكنولوجيا", slugSo: "teknoolajiyada", slugAr: "altiknulujia" },
   { key: "local-news", en: "Local News", so: "Wararka Deegaanka", ar: "الأخبار المحلية", slugSo: "wararka-deegaanka", slugAr: "alakhbar-almahalia" },
 ];
- 
+
 const AUTHORS = [
   { email: "amina@newsroom.test", name: "Amina Yusuf", slug: "amina-yusuf", role: Role.ADMIN },
   { email: "omar@newsroom.test", name: "Omar Hassan", slug: "omar-hassan", role: Role.EDITOR },
   { email: "layla@newsroom.test", name: "Layla Ahmed", slug: "layla-ahmed", role: Role.AUTHOR },
 ];
- 
+
 // ---------------------------------------------------------------
 // The 9 source articles (fully trilingual)
 // ---------------------------------------------------------------
- 
+
 interface LocalizedContent {
   title: string;
   excerpt: string;
@@ -80,7 +96,7 @@ interface SourceArticle {
   so: LocalizedContent;
   ar: LocalizedContent;
 }
- 
+
 const ARTICLES: SourceArticle[] = [
   // ============ POLITICS 1 ============
   {
@@ -119,7 +135,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ POLITICS 2 ============
   {
     categoryKey: "politics",
@@ -157,7 +173,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ POLITICS 3 ============
   {
     categoryKey: "politics",
@@ -195,7 +211,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ TECHNOLOGY 1 ============
   {
     categoryKey: "technology",
@@ -233,7 +249,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ TECHNOLOGY 2 ============
   {
     categoryKey: "technology",
@@ -271,7 +287,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ TECHNOLOGY 3 ============
   {
     categoryKey: "technology",
@@ -309,7 +325,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ LOCAL NEWS 1 ============
   {
     categoryKey: "local-news",
@@ -347,7 +363,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ LOCAL NEWS 2 ============
   {
     categoryKey: "local-news",
@@ -385,7 +401,7 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
- 
+
   // ============ LOCAL NEWS 3 ============
   {
     categoryKey: "local-news",
@@ -423,12 +439,621 @@ const ARTICLES: SourceArticle[] = [
       ],
     },
   },
+
+  // ============ TECHNOLOGY 4 ============
+  {
+    categoryKey: "technology",
+    en: {
+      title: "Mogadishu's Young Coders Build Apps to Solve Everyday Problems",
+      excerpt:
+        "A growing community of self-taught developers in the capital is turning local frustrations — from taxi fares to market prices — into mobile applications built for Somali users.",
+      body: [
+        "In a modest co-working space in Mogadishu, a small group of young developers gathers most evenings to write code by laptop light. Largely self-taught through online courses and shared tutorials, they are building mobile applications aimed squarely at problems they know intimately: unpredictable taxi fares, fluctuating market prices, and the difficulty of finding reliable local services.",
+        "The movement reflects a broader shift. As smartphone ownership spreads and mobile data becomes cheaper, a domestic market for locally-relevant apps has begun to take shape. Developers say building for Somali users means designing for intermittent connectivity, low-cost devices, and interfaces that work in the Somali language rather than only in English.",
+        "Funding remains the hardest obstacle. With few local investors and limited access to international venture capital, most projects are bootstrapped in spare time around other jobs. Some founders hope that partnerships with established telecom and mobile-money companies could provide both distribution and a path to revenue.",
+        "Still, the energy is real. Community-run meetups, informal mentorship, and a willingness to share knowledge have created a foundation that did not exist a few years ago. Whether any single app scales or not, participants argue, the deeper gain is a growing pool of local technical talent — people who can build, maintain, and imagine digital tools for their own communities.",
+      ],
+    },
+    so: {
+      title: "Barnaamij-sameeyayaasha Dhallinyarada ah ee Muqdisho oo Dhisa Ab-abyo Xalliya Dhibaatooyinka Maalinlaha ah",
+      excerpt:
+        "Bulsho sii kordheysa oo ah horumariyeyaal is-baray oo caasimadda jooga ayaa u rogaya dhibaatooyinka maxalliga ah — laga bilaabo qiimaha taksiga ilaa qiimaha suuqa — ab-abyo mobayl oo loogu talagalay isticmaaleyaasha Soomaalida.",
+      body: [
+        "Goob-shaqo yar oo ku taal Muqdisho, koox yar oo horumariyeyaal dhallinyaro ah ayaa fadhiista fiidkii badi si ay u qoraan koodh iyagoo iftiinka kombuyuutarkooda ku shaqeynaya. Iyagoo inta badan is-baray koorsooyin online ah iyo casharro la wadaago, waxay dhisayaan ab-abyo mobayl oo si toos ah wax uga qabanaya dhibaatooyin ay si fiican u yaqaanaan: qiimaha taksiga oo aan la saadaalin karin, qiimaha suuqa oo isbeddelaya, iyo dhibaatada lagu helo adeegyo maxalli ah oo la isku halleyn karo.",
+        "Dhaqdhaqaaqan wuxuu ka tarjumayaa isbeddel ballaadhan. Iyadoo lahaanshaha telefoonnada casriga ah uu faafayo iyo xogta mobaylku ay raqiis noqoneyso, suuq gudaha ah oo loogu talagalay ab-abyo la xiriira deegaanka ayaa bilaabay inuu qaab yeesho. Horumariyeyaashu waxay sheegaan in dhisidda isticmaaleyaasha Soomaalida ay ka dhigan tahay naqshadeynta xiriir gooya, aaladaha qiimahoodu jaban yahay, iyo interfaces ku shaqeeya afka Soomaaliga halkii ay ka ahaan lahaayeen Ingiriisiga oo kaliya.",
+        "Maalgelintu weli waa caqabadda ugu adag. Iyadoo ay yar yihiin maalgeliyeyaasha maxalliga ah oo ay xaddidan tahay helitaanka raasumaalka caalamiga ah, mashaariicda badankood waxaa lagu maalgeliyaa waqti-firaaqo agagaarka shaqooyin kale. Aasaasayaasha qaarkood waxay rajeynayaan in iskaashi lala yeesho shirkadaha telecom-ka iyo lacagta mobaylka uu bixin karo qaybinta iyo dariiq dakhli.",
+        "Weli, tamartu waa mid dhab ah. Kulanno ay bulshadu maamusho, la-talin aan rasmi ahayn, iyo diyaar-garow lagu wadaago aqoonta ayaa abuuray aasaas aan jirin dhowr sano ka hor. Haddii ab-ab kasta uu balaadho iyo in kale, waxqabtayaashu waxay ku doodaan, in faa'iidada ugu qoto dheeri tahay kelmed sii kordheysa oo xirfadlayaal farsamo maxalli ah — dad awood u leh inay dhisaan, dayactiraan, oo qiyaasaan qalabka dijitaalka ah ee bulshadooda.",
+      ],
+    },
+    ar: {
+      title: "مبرمجو مقديشو الشباب يبنون تطبيقات لحل مشكلات الحياة اليومية",
+      excerpt:
+        "مجتمع متنامٍ من المطورين العصاميين في العاصمة يحوّل الإحباطات المحلية — من أجرة سيارات الأجرة إلى أسعار السوق — إلى تطبيقات محمولة مصممة للمستخدمين الصوماليين.",
+      body: [
+        "في مساحة عمل مشتركة متواضعة في مقديشو، تجتمع مجموعة صغيرة من المطورين الشباب معظم الأمسيات لكتابة الشيفرة على ضوء حواسيبهم المحمولة. وقد تعلّم هؤلاء أنفسهم إلى حد كبير عبر الدورات على الإنترنت والدروس المتبادلة، وهم يبنون تطبيقات محمولة تستهدف مباشرةً مشكلات يعرفونها عن قرب: أجرة سيارات الأجرة غير المتوقعة، وأسعار السوق المتقلبة، وصعوبة إيجاد خدمات محلية موثوقة.",
+        "تعكس هذه الحركة تحولاً أوسع. فمع انتشار امتلاك الهواتف الذكية وانخفاض تكلفة بيانات الهاتف، بدأت سوق محلية للتطبيقات ذات الصلة بالبيئة المحلية تتشكّل. ويقول المطورون إن البناء للمستخدمين الصوماليين يعني التصميم لاتصال متقطع، وأجهزة منخفضة التكلفة، وواجهات تعمل باللغة الصومالية وليس بالإنجليزية وحدها.",
+        "يبقى التمويل أصعب عقبة. فمع قلة المستثمرين المحليين ومحدودية الوصول إلى رأس المال الاستثماري الدولي، تُموَّل معظم المشاريع ذاتياً في أوقات الفراغ حول وظائف أخرى. ويأمل بعض المؤسسين أن توفر الشراكات مع شركات الاتصالات والأموال عبر الهاتف الراسخة كلاً من التوزيع ومساراً نحو الإيرادات.",
+        "ومع ذلك، فإن الحماس حقيقي. فقد أوجدت اللقاءات التي يديرها المجتمع، والإرشاد غير الرسمي، والاستعداد لتبادل المعرفة أساساً لم يكن موجوداً قبل بضع سنوات. وسواء توسّع أي تطبيق بعينه أم لا، يرى المشاركون أن المكسب الأعمق هو مجموعة متنامية من المواهب التقنية المحلية — أشخاص قادرون على بناء الأدوات الرقمية لمجتمعاتهم وصيانتها وتخيّلها.",
+      ],
+    },
+  },
+
+  // ============ INTERNATIONAL (politics) 4 ============
+  {
+    categoryKey: "politics",
+    en: {
+      title: "Global Leaders Gather for Summit on Climate Finance for Developing Nations",
+      excerpt:
+        "Delegates from dozens of countries have convened to negotiate how wealthier economies will help fund climate adaptation in the nations most exposed to a warming planet.",
+      body: [
+        "Representatives from dozens of countries gathered this week for a high-level summit focused on one of the most contentious questions in international climate policy: how much wealthier nations should pay to help developing countries adapt to a changing climate, and how that money should be delivered.",
+        "For nations across Africa, South Asia, and small island states, the stakes are immediate. Many face intensifying droughts, floods, and storms while contributing only a fraction of historical emissions. Their negotiators have pressed for financing that arrives as grants rather than loans, arguing that debt-based climate aid deepens the very vulnerabilities it is meant to address.",
+        "Wealthier governments, facing their own domestic budget pressures, have urged a broader base of contributors and a greater role for private investment. The gap between pledges announced at past summits and money actually disbursed has become a recurring source of frustration, eroding trust in the negotiations.",
+        "Observers caution that the summit is unlikely to resolve the deadlock in a single sitting. Yet even incremental progress — clearer timelines, firmer commitments, simpler access to funds — would matter to communities already living with the consequences. The talks, analysts say, are less about distant targets than about whether the world's response keeps pace with a crisis unfolding now.",
+      ],
+    },
+    so: {
+      title: "Hoggaamiyeyaasha Caalamka oo u Shiray Shir-madaxeed ku saabsan Maalgelinta Cimilada ee Dalalka Soo Koraya",
+      excerpt:
+        "Ergooyin ka socda dhowr iyo toban dal ayaa isugu yimid si ay uga wada hadlaan sida dhaqaalayaasha hodanka ah ay uga caawin doonaan maalgelinta la-qabsiga cimilada ee dalalka ugu nugul adduun sii kululaanaya.",
+      body: [
+        "Wakiillo ka kala socda dhowr iyo toban dal ayaa toddobaadkan u shiray shir-madaxeed heer sare ah oo diiradda lagu saaray mid ka mid ah su'aalaha ugu muranka badan siyaasadda cimilada caalamiga ah: inta ay tahay in dalalka hodanka ahi bixiyaan si ay uga caawiyaan dalalka soo koraya inay la qabsadaan cimilo isbeddeleysa, iyo sida lacagtaas loo gudbin doono.",
+        "Dalalka ku baahsan Afrika, Koonfurta Aasiya, iyo dowladaha jasiiradaha yaryar, khatartu waa mid degdeg ah. Qaar badan ayaa wajahaya abaaro, daadad, iyo duufaanno sii xoogaysanaya iyagoo gacan ka geystay oo kaliya qayb yar oo ka mid ah qiiqa taariikhiga ah. Gorgortamayaashoodu waxay ku cadaadiyeen maalgelin u timaadda deeqo halkii ay ka ahaan lahayd amaah, iyagoo ku dooday in kaalmada cimilada ee amaahda ku saleysan ay sii xoojineyso nuglaanshaha ay tahay inay wax ka qabato.",
+        "Dowladaha hodanka ah, oo wajahaya cadaadis miisaaniyadeed gudaha ah, ayaa ku booriyay saldhig ballaadhan oo ka-qaybgalayaal ah iyo door weyn oo maalgashiga gaarka ah. Farqiga u dhexeeya ballanqaadyada lagu dhawaaqay shir-madaxeedyadii hore iyo lacagta dhab ahaan la bixiyay ayaa noqday ilo caro oo soo noqnoqda, taasoo dhaawacaysa kalsoonida gorgortanka.",
+        "Goobjoogayaashu waxay ka digayaan in shir-madaxeedku uusan u badnayn inuu xalliyo istaagga hal fadhi. Haddana xitaa horumar tartiib ah — jadwalyo cad, ballanqaadyo adag, helitaan fudud oo lacagaha — ayaa muhiim u ah bulshooyinka mar hore la nool cawaaqibka. Wadahadalladu, falanqeeyayaashu waxay yiraahdeen, ma aha wax ku saabsan bartilmaameedyo fog intii ay ka ahaan lahaayeen ma jawaabta adduunku ay la socoto qalalaase hadda socda.",
+      ],
+    },
+    ar: {
+      title: "قادة العالم يجتمعون في قمة حول تمويل المناخ للدول النامية",
+      excerpt:
+        "اجتمع مندوبون من عشرات الدول للتفاوض حول كيفية مساعدة الاقتصادات الأكثر ثراءً في تمويل التكيف المناخي في البلدان الأكثر تعرضاً لكوكب يزداد احتراراً.",
+      body: [
+        "اجتمع ممثلون من عشرات الدول هذا الأسبوع في قمة رفيعة المستوى ركّزت على واحدة من أكثر المسائل إثارة للجدل في سياسة المناخ الدولية: كم ينبغي أن تدفع الدول الأكثر ثراءً لمساعدة البلدان النامية على التكيف مع مناخ متغير، وكيف ينبغي أن تُقدَّم هذه الأموال.",
+        "بالنسبة للدول في أنحاء أفريقيا وجنوب آسيا والدول الجزرية الصغيرة، فإن المخاطر آنية. إذ يواجه كثيرون حالات جفاف وفيضانات وعواصف متزايدة الشدة بينما لم يسهموا إلا بجزء ضئيل من الانبعاثات التاريخية. وقد ضغط مفاوضوهم من أجل تمويل يصل على شكل منح لا قروض، بحجة أن المساعدة المناخية القائمة على الديون تعمّق أوجه الهشاشة ذاتها التي يُفترض أن تعالجها.",
+        "أما الحكومات الأكثر ثراءً، التي تواجه ضغوطاً على ميزانياتها الداخلية، فقد دعت إلى قاعدة أوسع من المساهمين ودور أكبر للاستثمار الخاص. وقد أصبحت الفجوة بين التعهدات المعلنة في القمم الماضية والأموال المصروفة فعلياً مصدر إحباط متكرر يقوّض الثقة في المفاوضات.",
+        "ويحذّر المراقبون من أن القمة من غير المرجح أن تحل الجمود في جلسة واحدة. ومع ذلك، فإن حتى التقدم التدريجي — جداول زمنية أوضح، والتزامات أكثر حزماً، ووصولاً أبسط إلى الأموال — سيكون مهماً لمجتمعات تعيش بالفعل مع العواقب. والمحادثات، كما يقول المحللون، تتعلق بما إذا كانت استجابة العالم تواكب أزمة تتكشف الآن أكثر من تعلقها بأهداف بعيدة.",
+      ],
+    },
+  },
+
+  // ============ LOCAL NEWS 4 ============
+  {
+    categoryKey: "local-news",
+    en: {
+      title: "Fishing Communities Along Somalia's Coast Invest in Cold Storage",
+      excerpt:
+        "New refrigeration facilities in coastal towns are helping fishers preserve their catch, reduce waste, and reach markets further inland for the first time.",
+      body: [
+        "Along stretches of Somalia's long coastline, fishing cooperatives have begun installing cold storage facilities that are quietly transforming a centuries-old livelihood. For generations, fishers faced a stark limit: without refrigeration, the day's catch had to be sold quickly and cheaply, or risk spoiling in the heat.",
+        "The new facilities, some powered by solar panels to cope with unreliable electricity, allow fish to be stored and transported over longer distances. Fishers say this has begun to change the economics of their work, letting them hold stock for better prices and supply markets in inland towns that previously had little access to fresh seafood.",
+        "Somalia has one of the longest coastlines in Africa, and its waters are rich with fish. Yet the sector has long been underdeveloped, hampered by limited infrastructure, insecurity at sea, and competition from foreign vessels. Local advocates argue that modest investments in storage, ice, and transport could unlock significant value for coastal communities.",
+        "Challenges remain, from maintaining equipment to securing steady demand. But for the fishing families involved, the change is tangible. Where a good catch once meant a race against spoilage, it now offers the possibility of planning, saving, and building a more stable future from the sea.",
+      ],
+    },
+    so: {
+      title: "Bulshooyinka Kalluumeysiga ee Xeebaha Soomaaliya oo Maalgeliya Kaydinta Qaboojinta",
+      excerpt:
+        "Xarumo cusub oo qaboojin ah oo ku yaal magaalooyinka xeebaha ayaa ka caawinaya kalluumeysatada inay ilaaliyaan waxa ay qabtaan, yareeyaan qashinka, oo gaaraan suuqyo gudaha dhaca ah markii ugu horreysay.",
+      body: [
+        "Meelo ka mid ah xeebta dheer ee Soomaaliya, iskaashatooyinka kalluumeysiga ayaa bilaabay inay rakibaan xarumo kaydin qaboojin ah oo si aamusnaan ah u beddelaya nolol-maalmeedka qarniyo jiray. Farac ka farac, kalluumeysatadu waxay wajaheen xad adag: iyadoo aan qaboojin jirin, kalluunka maalinta waa in si degdeg ah oo raqiis ah loo iibiyaa, ama halis ah inuu ku xumaado kulaylka.",
+        "Xarumaha cusub, kuwaas oo qaarkood ku shaqeeya alwaaxyada qorraxda si ay ula qabsadaan koronto aan la isku halleyn karin, waxay u oggolaadaan in kalluunka la kaydiyo oo loo qaado masaafo dheer. Kalluumeysatadu waxay sheegaan in tani ay bilowday inay beddesho dhaqaalaha shaqadooda, iyagoo u oggolaanaya inay hayaan alaab qiimo wanaagsan iyo inay siiyaan suuqyada magaalooyinka gudaha ah ee hore u lahaa helitaan yar oo cunto badeed cusub ah.",
+        "Soomaaliya waxay leedahay mid ka mid ah xeebaha ugu dhaadheer Afrika, biyaheeduna waxay hodan ku yihiin kalluun. Haddana qaybtan waa mid muddo dheer aan la horumarin, oo ay hor istaagtay kaabayaal xaddidan, amni-darro badda ka jirta, iyo tartanka maraakiibta shisheeye. U-doodayaasha maxalliga ah waxay ku doodaan in maalgelin yar oo lagu sameeyo kaydinta, barafka, iyo gaadiidka ay furi karto qiimo weyn oo loogu talagalay bulshooyinka xeebaha.",
+        "Caqabado ayaa weli jira, laga bilaabo dayactirka qalabka ilaa xaqiijinta baahi joogto ah. Laakiin qoysaska kalluumeysiga ku lugta leh, isbeddelku waa mid la taaban karo. Meesha qabsasho wanaagsani mar ay ka dhigneyd tartan ka dhan ah xumaanshaha, hadda waxay bixisaa suurtogalnimada qorsheynta, kaydinta, iyo dhisidda mustaqbal deggan oo badda laga helo.",
+      ],
+    },
+    ar: {
+      title: "مجتمعات الصيد على ساحل الصومال تستثمر في التخزين المبرّد",
+      excerpt:
+        "تساعد مرافق التبريد الجديدة في البلدات الساحلية الصيادين على حفظ صيدهم وتقليل الهدر والوصول إلى أسواق أبعد في الداخل للمرة الأولى.",
+      body: [
+        "على امتداد أجزاء من ساحل الصومال الطويل، بدأت تعاونيات الصيد بتركيب مرافق تخزين مبرّد تحوّل بهدوء سبل عيش عمرها قرون. فلأجيال، واجه الصيادون قيداً صارماً: فمن دون تبريد، كان لا بد من بيع صيد اليوم بسرعة وبثمن بخس، وإلا خاطر بالفساد في الحر.",
+        "وتتيح المرافق الجديدة، التي يعمل بعضها بالألواح الشمسية للتعامل مع الكهرباء غير الموثوقة، تخزين الأسماك ونقلها لمسافات أطول. ويقول الصيادون إن هذا بدأ يغيّر اقتصاديات عملهم، إذ يتيح لهم الاحتفاظ بالمخزون للحصول على أسعار أفضل وتزويد أسواق البلدات الداخلية التي لم يكن لديها سابقاً سوى وصول ضئيل إلى المأكولات البحرية الطازجة.",
+        "يملك الصومال أحد أطول السواحل في أفريقيا، ومياهه غنية بالأسماك. ومع ذلك، ظل القطاع غير متطور لفترة طويلة، معوَّقاً بالبنية التحتية المحدودة وانعدام الأمن في البحر والمنافسة من السفن الأجنبية. ويرى المدافعون المحليون أن استثمارات متواضعة في التخزين والثلج والنقل يمكن أن تطلق قيمة كبيرة للمجتمعات الساحلية.",
+        "تبقى التحديات قائمة، من صيانة المعدات إلى تأمين طلب ثابت. لكن بالنسبة لأسر الصيد المعنية، فإن التغيير ملموس. فحيث كان الصيد الوفير يعني ذات يوم سباقاً ضد الفساد، بات يتيح الآن إمكانية التخطيط والادخار وبناء مستقبل أكثر استقراراً من البحر.",
+      ],
+    },
+  },
+
+  // ============ TECHNOLOGY 5 ============
+  {
+    categoryKey: "technology",
+    en: {
+      title: "Undersea Cable Upgrade Promises Faster Internet Across the Horn of Africa",
+      excerpt:
+        "A new investment in submarine fibre-optic capacity is set to boost internet speeds and resilience for a region long dependent on a handful of vulnerable connections.",
+      body: [
+        "A planned upgrade to the submarine cable infrastructure serving the Horn of Africa promises to significantly increase internet capacity for a region that has long depended on a small number of undersea connections. The additional capacity is expected to improve both speed and reliability for millions of users.",
+        "For countries in the region, connectivity has historically been a bottleneck. A cut to a single cable — whether from a ship's anchor, an earthquake, or equipment failure — has in the past slowed or severed internet access for entire nations. Adding capacity and redundant routes reduces that fragility.",
+        "Faster, more reliable connectivity carries broad implications. It underpins the mobile-money systems that much of the regional economy now runs on, supports the growth of digital services, and makes possible everything from remote education to cloud-based business tools. Analysts note that infrastructure of this kind is a precondition for the digital economy many governments are trying to build.",
+        "The benefits, however, depend on the so-called last mile — the local networks that carry data from landing stations to homes and businesses. Without parallel investment in domestic infrastructure and affordable access, the gains from greater international capacity may not reach the users who need them most.",
+      ],
+    },
+    so: {
+      title: "Casriyeynta Fiilada Badda-hoosaadka ah oo Ballanqaadaysa Internet Dhaqso ah oo ku Baahsan Geeska Afrika",
+      excerpt:
+        "Maalgelin cusub oo lagu sameeyay awoodda fiilada fiber-optic-ka ee badda-hoosaadka ah ayaa la filayaa inuu kordhiyo xawaaraha internetka iyo adkaysiga gobol muddo dheer ku tiirsanaa dhowr xiriir oo nugul.",
+      body: [
+        "Casriyeyn la qorsheeyay oo lagu sameeyay kaabayaasha fiilada badda-hoosaadka ah ee u adeegta Geeska Afrika ayaa ballanqaadaysa inuu si weyn u kordhiyo awoodda internetka gobol muddo dheer ku tiirsanaa tiro yar oo xiriirro badda-hoosaad ah. Awoodda dheeraadka ah waxaa la filayaa inay hagaajiso xawaaraha iyo la-isku-halleynta malaayiin isticmaaleyaal ah.",
+        "Dalalka gobolka, xiriirku taariikh ahaan wuxuu ahaa caqabad. Goynta hal fiilo — ha ahaato barroosinka markab, dhulgariir, ama cilad qalab — waxay hore u dib-udhigtay ama gooysay helitaanka internetka umadaha oo dhan. Ku darista awood iyo dariiqyo dheeraad ah ayaa yareeya nuglaanshahaas.",
+        "Xiriir dhaqso badan oo la isku halleyn karo wuxuu leeyahay saameyn ballaadhan. Wuxuu taageeraa nidaamyada lacagta mobaylka ee dhaqaalaha gobolka intiisa badan hadda ku shaqeeyaan, wuxuu taageeraa koritaanka adeegyada dijitaalka ah, oo wuxuu suurtogal ka dhigaa wax kasta oo laga bilaabo waxbarasho fog ilaa qalabka ganacsi ee daruuraha ku saleysan. Falanqeeyayaashu waxay xuseen in kaabayaal noocan oo kale ah ay tahay shuruud looga baahan yahay dhaqaalaha dijitaalka ah ee dowlado badani ay isku dayayaan inay dhisaan.",
+        "Faa'iidooyinka, si kastaba ha ahaatee, waxay ku xiran yihiin waxa loogu yeero mayl-kii ugu dambeeyay — shabakadaha maxalliga ah ee xogta ka qaada saldhigyada dhulka ilaa guryaha iyo ganacsiyada. La'aanta maalgelin barbar socota oo lagu sameeyo kaabayaasha gudaha iyo helitaan la awoodi karo, faa'iidooyinka awoodda caalamiga ah oo weyn ayaan laga yaabo inay gaaraan isticmaaleyaasha ugu baahan.",
+      ],
+    },
+    ar: {
+      title: "ترقية الكابل البحري تَعِد بإنترنت أسرع في أنحاء القرن الأفريقي",
+      excerpt:
+        "استثمار جديد في سعة الألياف الضوئية البحرية يُتوقع أن يعزز سرعات الإنترنت ومرونته لمنطقة اعتمدت طويلاً على حفنة من الوصلات الهشة.",
+      body: [
+        "تَعِد ترقية مخطط لها للبنية التحتية للكابلات البحرية التي تخدم القرن الأفريقي بزيادة كبيرة في سعة الإنترنت لمنطقة اعتمدت طويلاً على عدد قليل من الوصلات البحرية. ومن المتوقع أن تحسّن السعة الإضافية كلاً من السرعة والموثوقية لملايين المستخدمين.",
+        "بالنسبة لدول المنطقة، كان الاتصال تاريخياً عنق زجاجة. فقطع كابل واحد — سواء من مرساة سفينة أو زلزال أو عطل في المعدات — أدى في الماضي إلى إبطاء أو قطع الوصول إلى الإنترنت لأمم بأكملها. وإضافة السعة والمسارات الاحتياطية تقلل من تلك الهشاشة.",
+        "يحمل الاتصال الأسرع والأكثر موثوقية آثاراً واسعة. فهو يدعم أنظمة الأموال عبر الهاتف التي يعمل عليها الآن جزء كبير من اقتصاد المنطقة، ويدعم نمو الخدمات الرقمية، ويجعل ممكناً كل شيء من التعليم عن بُعد إلى أدوات الأعمال السحابية. ويلاحظ المحللون أن بنية تحتية من هذا النوع شرط مسبق للاقتصاد الرقمي الذي تحاول حكومات كثيرة بناءه.",
+        "غير أن الفوائد تعتمد على ما يُسمى الميل الأخير — الشبكات المحلية التي تنقل البيانات من محطات الإنزال إلى المنازل والشركات. فمن دون استثمار موازٍ في البنية التحتية المحلية والوصول الميسور التكلفة، قد لا تصل مكاسب السعة الدولية الأكبر إلى المستخدمين الأكثر حاجة إليها.",
+      ],
+    },
+  },
+
+  // ============ INTERNATIONAL (politics) 5 ============
+  {
+    categoryKey: "politics",
+    en: {
+      title: "Regional Bloc Pushes for Deeper Trade Integration Across East Africa",
+      excerpt:
+        "Member states are negotiating to lower barriers, harmonise standards, and ease the movement of goods across borders in a bid to boost intra-regional commerce.",
+      body: [
+        "Governments across East Africa are pressing forward with negotiations aimed at deepening economic integration, seeking to lower tariffs, harmonise product standards, and streamline the movement of goods across their shared borders. Proponents argue that reducing friction in regional trade could unlock growth that individual national markets cannot achieve alone.",
+        "Intra-regional trade in East Africa has historically lagged behind other parts of the world, held back by inconsistent regulations, cumbersome customs procedures, and gaps in transport infrastructure. A truck carrying goods across several borders can face days of delay, adding cost that ultimately falls on consumers and businesses.",
+        "The push aligns with a broader continental effort to build a single African market, a long-term project that many economists see as essential to the continent's development. Regional integration is often described as a testing ground: if neighbouring states can align their rules and trust one another's institutions, the wider vision becomes more credible.",
+        "Yet integration is politically delicate. Governments worry about protecting domestic industries, losing tariff revenue, and ceding sovereignty over economic policy. Negotiators face the difficult task of balancing these concerns against the collective benefits of a larger, more open market — a balance that will determine how far and how fast integration proceeds.",
+      ],
+    },
+    so: {
+      title: "Ururka Gobolka oo Riixaya Isdhexgal Ganacsi oo Qoto dheer oo ku Baahsan Bariga Afrika",
+      excerpt:
+        "Dowladaha xubnaha ah ayaa ka wada hadlaya inay hoos u dhigaan caqabadaha, waafajiyaan heerarka, oo fududeeyaan dhaqdhaqaaqa alaabta xudduudaha si ay u kordhiyaan ganacsiga gobolka gudihiisa.",
+      body: [
+        "Dowladaha ku baahsan Bariga Afrika ayaa hore u wadaya gorgortan lagu ujeedo inay qoto-dheereeyaan isdhexgalka dhaqaalaha, iyagoo raadinaya inay hoos u dhigaan cashuuraha, waafajiyaan heerarka badeecadaha, oo fududeeyaan dhaqdhaqaaqa alaabta xudduudahooda wadaagga ah. Taageerayaashu waxay ku doodaan in yaraynta cakanka ganacsiga gobolka ay furi karto koboc aan suuqyada qaranka ee gaarka ahi keligood gaari karin.",
+        "Ganacsiga gobolka gudihiisa ee Bariga Afrika taariikh ahaan wuxuu ka dib maray qaybo kale oo adduunka, oo hor istaagay xeerar aan is-waafaqsanayn, hababka kastamka oo culus, iyo daldaloolo ku jira kaabayaasha gaadiidka. Baabuur sida alaab dhowr xudduud ah wuxuu wajahi karaa maalmo dib-udhac ah, taasoo ku darta kharash ugu dambeyntii ku dhaca macaamiisha iyo ganacsiyada.",
+        "Riixiddu waxay la jaanqaadaysaa dadaal ballaadhan oo qaaradeed oo lagu dhisayo hal suuq oo Afrikaan ah, mashruuc muddo-dheer ah oo dhaqaaleyahano badani ay u arkaan mid lagama maarmaan u ah horumarka qaaradda. Isdhexgalka gobolka waxaa badanaa lagu tilmaamaa goob-tijaabo: haddii dowladaha deriska ah ay awoodaan inay waafajiyaan xeerarkooda oo ay isku kalsoonaadaan hay'adaha midba midka kale, aragtida ballaadhan ayaa noqoneysa mid la aamini karo.",
+        "Haddana isdhexgalku waa mid siyaasad ahaan xasaasi ah. Dowladuhu waxay ka welwelsan yihiin ilaalinta warshadaha gudaha, luminta dakhliga cashuuraha, iyo ka-tanaasulka madaxbannaanida siyaasadda dhaqaalaha. Gorgortamayaashu waxay wajahayaan hawsha adag ee dheellitirka welwelkan iyo faa'iidooyinka wadajirka ah ee suuq weyn oo furan — dheellitir go'aamin doona inta iyo xawliga uu isdhexgalku ku socdo.",
+      ],
+    },
+    ar: {
+      title: "التكتل الإقليمي يدفع نحو تكامل تجاري أعمق في أنحاء شرق أفريقيا",
+      excerpt:
+        "تتفاوض الدول الأعضاء لخفض الحواجز وتنسيق المعايير وتسهيل حركة البضائع عبر الحدود في محاولة لتعزيز التجارة داخل المنطقة.",
+      body: [
+        "تمضي الحكومات في أنحاء شرق أفريقيا قدماً في مفاوضات تهدف إلى تعميق التكامل الاقتصادي، ساعيةً إلى خفض الرسوم الجمركية وتنسيق معايير المنتجات وتبسيط حركة البضائع عبر حدودها المشتركة. ويرى المؤيدون أن تقليل الاحتكاك في التجارة الإقليمية يمكن أن يطلق نمواً لا تستطيع الأسواق الوطنية الفردية تحقيقه وحدها.",
+        "لطالما تخلّفت التجارة داخل منطقة شرق أفريقيا عن أجزاء أخرى من العالم، معوَّقةً بلوائح غير متسقة وإجراءات جمركية مرهقة وثغرات في البنية التحتية للنقل. فالشاحنة التي تحمل بضائع عبر عدة حدود قد تواجه أياماً من التأخير، ما يضيف تكلفة تقع في النهاية على المستهلكين والشركات.",
+        "يتماشى هذا الدفع مع جهد قاري أوسع لبناء سوق أفريقية موحدة، وهو مشروع طويل الأمد يراه كثير من الاقتصاديين ضرورياً لتنمية القارة. وكثيراً ما يوصف التكامل الإقليمي بأنه ساحة اختبار: فإذا استطاعت الدول المتجاورة مواءمة قواعدها والثقة بمؤسسات بعضها البعض، أصبحت الرؤية الأوسع أكثر مصداقية.",
+        "غير أن التكامل حساس سياسياً. فالحكومات تقلق بشأن حماية الصناعات المحلية، وفقدان إيرادات الرسوم الجمركية، والتنازل عن السيادة على السياسة الاقتصادية. ويواجه المفاوضون مهمة صعبة تتمثل في الموازنة بين هذه المخاوف والفوائد الجماعية لسوق أكبر وأكثر انفتاحاً — توازن سيحدد إلى أي مدى وبأي سرعة يمضي التكامل.",
+      ],
+    },
+  },
+
+  // ============ LOCAL NEWS 5 ============
+  {
+    categoryKey: "local-news",
+    en: {
+      title: "New Maternal Health Clinics Open in Underserved Somali Districts",
+      excerpt:
+        "A network of clinics focused on maternal and newborn care is expanding into rural areas, aiming to reduce one of the region's most persistent health challenges.",
+      body: [
+        "A series of new health clinics focused on maternal and newborn care has begun operating in rural districts, part of an effort to address one of Somalia's most persistent public-health challenges. Maternal mortality has long been among the highest in the world, driven by limited access to trained care, long distances to facilities, and shortages of equipment and staff.",
+        "The new clinics aim to bring skilled birth attendance closer to communities that have historically had little access. Staffed by midwives and nurses and stocked with essential supplies, they focus on antenatal check-ups, safe delivery, and the critical hours after birth when many complications arise.",
+        "Health workers emphasise that distance is often the deciding factor. A woman facing complications may live hours from the nearest facility, on roads that become impassable in the rainy season. Bringing care closer, they argue, can be the difference between a routine delivery and a preventable tragedy.",
+        "Sustaining the clinics will require steady funding, trained personnel, and reliable supply chains — none of them guaranteed in a country facing competing demands on limited resources. But for the families they serve, the arrival of skilled care within reach marks a meaningful change in communities where childbirth has too often carried grave risk.",
+      ],
+    },
+    so: {
+      title: "Rugo Caafimaad oo Cusub oo Hooyada ah oo laga furay Degmooyinka Soomaaliyeed ee Adeeg-yari ah",
+      excerpt:
+        "Shabakad rugo caafimaad ah oo diiradda saaraysa daryeelka hooyada iyo dhallaanka cusub ayaa u fidaysa aagagga miyiga ah, iyadoo ujeeddadu tahay in la yareeyo mid ka mid ah caqabadaha caafimaad ee gobolka ugu adkaysi badan.",
+      body: [
+        "Rugo caafimaad oo cusub oo taxane ah oo diiradda saaraya daryeelka hooyada iyo dhallaanka cusub ayaa bilaabay inay ka shaqeeyaan degmooyinka miyiga ah, oo qayb ka ah dadaal lagu wajahayo mid ka mid ah caqabadaha caafimaadka guud ee Soomaaliya ugu adkaysi badan. Dhimashada hooyada muddo dheer waxay ka mid ahayd kuwa ugu sarreeya adduunka, oo ay kicisay helitaan xaddidan oo daryeel tababaran, masaafo dheer oo loo maro xarumaha, iyo yaraanta qalabka iyo shaqaalaha.",
+        "Rugaha cusub waxay ujeeddadoodu tahay inay u soo dhoweeyaan daryeel-dhalmo xirfad leh bulshooyinka taariikh ahaan lahaa helitaan yar. Iyagoo ay ka shaqeeyaan umulisooyin iyo kalkaaliyeyaal oo ay ku kaydsan yihiin sahay muhiim ah, waxay diiradda saaraan baaritaanka uur-ka-hor, dhalmo ammaan ah, iyo saacadaha muhiimka ah ee dhalmada ka dib markii dhibaatooyin badani ay kacaan.",
+        "Shaqaalaha caafimaadku waxay carrabka ku adkeeyaan in masaafadu ay inta badan tahay arrinta go'aaminaysa. Naag wajaheysa dhibaatooyin waxay ku noolaan kartaa saacado ka fog xarunta ugu dhow, waddooyin noqda kuwo aan la mari karin xilliga roobabka. Soo-dhoweynta daryeelka, waxay ku doodaan, waxay noqon kartaa farqiga u dhexeeya dhalmo caadi ah iyo musiibo laga hortagi karo.",
+        "Sii-wadista rugaha waxay u baahan doontaa maalgelin joogto ah, shaqaale tababaran, iyo silsilado sahay oo la isku halleyn karo — mid koodna aan la dammaanad qaadin dal wajahaya baahiyo tartamaya oo lagu hayo kheyraad xaddidan. Laakiin qoysaska ay u adeegaan, imaatinka daryeel xirfad leh oo la gaari karo wuxuu calaamad u yahay isbeddel macno leh bulshooyinka ay dhalmadu inta badan khatar weyn ku qaaday.",
+      ],
+    },
+    ar: {
+      title: "عيادات جديدة لصحة الأمومة تُفتتح في مناطق صومالية محرومة من الخدمات",
+      excerpt:
+        "تتوسع شبكة من العيادات المركّزة على رعاية الأمومة والمواليد الجدد إلى المناطق الريفية، بهدف الحد من واحد من أكثر التحديات الصحية استمراراً في المنطقة.",
+      body: [
+        "بدأت سلسلة من العيادات الصحية الجديدة المركّزة على رعاية الأمومة والمواليد الجدد بالعمل في المناطق الريفية، ضمن جهد لمعالجة واحد من أكثر تحديات الصحة العامة استمراراً في الصومال. فقد ظلّت وفيات الأمهات طويلاً من بين الأعلى في العالم، مدفوعةً بمحدودية الوصول إلى رعاية مدرَّبة، وبُعد المسافات إلى المرافق، ونقص المعدات والكوادر.",
+        "تهدف العيادات الجديدة إلى تقريب رعاية الولادة الماهرة من المجتمعات التي لم يكن لديها تاريخياً سوى وصول ضئيل. وبطاقم من القابلات والممرضات ومخزون من الإمدادات الأساسية، تركّز على فحوص ما قبل الولادة، والولادة الآمنة، والساعات الحرجة بعد الولادة حين تنشأ كثير من المضاعفات.",
+        "يؤكد العاملون في المجال الصحي أن المسافة غالباً ما تكون العامل الحاسم. فالمرأة التي تواجه مضاعفات قد تعيش على بُعد ساعات من أقرب مرفق، على طرق تصبح غير سالكة في موسم الأمطار. وتقريب الرعاية، كما يقولون، قد يكون الفرق بين ولادة اعتيادية ومأساة يمكن الوقاية منها.",
+        "سيتطلب استمرار العيادات تمويلاً ثابتاً، وكوادر مدرَّبة، وسلاسل إمداد موثوقة — ولا شيء منها مضمون في بلد يواجه مطالب متنافسة على موارد محدودة. لكن بالنسبة للأسر التي تخدمها، فإن وصول رعاية ماهرة في المتناول يمثّل تغييراً ذا معنى في مجتمعات طالما حملت فيها الولادة خطراً جسيماً.",
+      ],
+    },
+  },
+
+  // ============ TECHNOLOGY 6 ============
+  {
+    categoryKey: "technology",
+    en: {
+      title: "Digital Payment Startups Compete to Serve Somalia's Unbanked",
+      excerpt:
+        "A wave of fintech ventures is racing to offer savings, credit, and payment tools to millions who have long operated outside the formal banking system.",
+      body: [
+        "A new generation of financial-technology startups is competing to reach the millions of Somalis who have historically operated outside the formal banking system. Building on the country's widespread adoption of mobile money, these ventures are experimenting with savings products, small-scale credit, and payment tools designed for a largely cash-and-mobile economy.",
+        "Somalia offers unusual conditions for fintech. Decades without a fully functioning traditional banking sector pushed both consumers and businesses toward mobile-based alternatives, giving the country one of the highest rates of mobile-money use in the world. For startups, that means a population already comfortable with digital transactions.",
+        "The opportunities come with real challenges. Extending credit requires ways to assess risk in an economy with little formal financial history. Regulation is still developing, and questions of consumer protection, data privacy, and fraud loom large as services scale. Trust, hard-won and easily lost, is the currency these companies most depend on.",
+        "Whether the current wave produces durable institutions or a shakeout of competing apps remains to be seen. But the direction is clear: financial services in Somalia are being reimagined for mobile-first users, and the companies that solve for trust and reliability may help bring millions more fully into the formal economy.",
+      ],
+    },
+    so: {
+      title: "Startup-yada Lacag-bixinta Dijitaalka ah oo u Tartamaya inay u Adeegaan Soomaalida aan Bangiga Lahayn",
+      excerpt:
+        "Mowjad ka mid ah shirkadaha fintech ah ayaa u tartamaysa inay bixiyaan kaydin, deyn, iyo qalab lacag-bixineed oo loogu talagalay malaayiin muddo dheer ka shaqeeyay nidaamka bangiyada rasmiga ah dibaddiisa.",
+      body: [
+        "Jiil cusub oo startup-yo teknoolajiyada maaliyadeed ah ayaa u tartamaya inay gaaraan malaayiinta Soomaalida ah ee taariikh ahaan ka shaqeeyay nidaamka bangiyada rasmiga ah dibaddiisa. Iyagoo ku dhisaya qaadashada baahsan ee dalka ee lacagta mobaylka, shirkadahani waxay tijaabinayaan alaab kaydineed, deyn yar-yar, iyo qalab lacag-bixineed oo loogu talagalay dhaqaale inta badan ah lacag-caddaan iyo mobayl.",
+        "Soomaaliya waxay bixisaa xaalado aan caadi ahayn oo loogu talagalay fintech-ka. Tobannaan sano oo aan la lahayn qayb bangi oo dhab ah oo si buuxda u shaqeynaysa ayaa u riixday macaamiisha iyo ganacsiyadaba xulasho mobayl ku saleysan, taasoo dalka siisay mid ka mid ah heerarka ugu sarreeya ee isticmaalka lacagta mobaylka adduunka. Startup-yada, taasi waxay ka dhigan tahay dad mar hore la qabsaday macaamil dijitaal ah.",
+        "Fursaduhu waxay la yimaadaan caqabado dhab ah. Fidinta deynta waxay u baahan tahay siyaabo lagu qiimeeyo khatarta dhaqaale ay yar tahay taariikh maaliyadeed rasmi ah. Sharcigu weli wuu soo koraya, su'aalaha ilaalinta macaamiisha, sirta xogta, iyo khiyaanada ayaa weyn markii adeegyadu balaadhaan. Kalsoonida, oo si adag loo helo oo si fudud loo lumiyo, waa lacagta ay shirkadahani ugu tiirsan yihiin.",
+        "In mowjadda hadda jirtaa ay soo saarto hay'ado waara iyo in kale ama iska-dhac ab-abyo tartamaya ayaa weli la arki doonaa. Laakiin jihadu waa cad: adeegyada maaliyadeed ee Soomaaliya waxaa dib loogu qiyaasayaa isticmaaleyaasha mobayl-hore, shirkadaha xalliya kalsoonida iyo la-isku-halleynta ayaa laga yaabaa inay gacan ka geystaan inay malaayiin dheeraad ah si buuxda u soo geliyaan dhaqaalaha rasmiga ah.",
+      ],
+    },
+    ar: {
+      title: "شركات المدفوعات الرقمية الناشئة تتنافس لخدمة الصوماليين غير المتعاملين مع المصارف",
+      excerpt:
+        "موجة من المشاريع في التقنية المالية تتسابق لتقديم أدوات الادخار والائتمان والدفع لملايين ظلّوا طويلاً يعملون خارج النظام المصرفي الرسمي.",
+      body: [
+        "يتنافس جيل جديد من الشركات الناشئة في مجال التقنية المالية للوصول إلى ملايين الصوماليين الذين عملوا تاريخياً خارج النظام المصرفي الرسمي. وبالبناء على انتشار اعتماد البلاد على الأموال عبر الهاتف، تجرّب هذه المشاريع منتجات ادخار وائتماناً صغير الحجم وأدوات دفع مصممة لاقتصاد يقوم إلى حد كبير على النقد والهاتف.",
+        "يوفّر الصومال ظروفاً غير عادية للتقنية المالية. فعقود من دون قطاع مصرفي تقليدي يعمل بكامل طاقته دفعت المستهلكين والشركات نحو بدائل قائمة على الهاتف، ما منح البلاد أحد أعلى معدلات استخدام الأموال عبر الهاتف في العالم. وبالنسبة للشركات الناشئة، يعني ذلك وجود سكان مرتاحين أصلاً للمعاملات الرقمية.",
+        "تأتي الفرص مع تحديات حقيقية. فتقديم الائتمان يتطلب طرقاً لتقييم المخاطر في اقتصاد ذي تاريخ مالي رسمي ضئيل. ولا يزال التنظيم في طور التطور، وتلوح مسائل حماية المستهلك وخصوصية البيانات والاحتيال بقوة مع توسّع الخدمات. والثقة، التي تُكتسب بصعوبة وتُفقد بسهولة، هي العملة التي تعتمد عليها هذه الشركات أكثر من غيرها.",
+        "ويبقى أن نرى ما إذا كانت الموجة الحالية ستنتج مؤسسات دائمة أم تصفية لتطبيقات متنافسة. لكن الاتجاه واضح: يُعاد تصور الخدمات المالية في الصومال لمستخدمين يعتمدون الهاتف أولاً، والشركات التي تحل مسألتَي الثقة والموثوقية قد تساعد في إدخال ملايين آخرين إلى الاقتصاد الرسمي بشكل أكمل.",
+      ],
+    },
+  },
+
+  // ============ INTERNATIONAL (politics) 6 ============
+  {
+    categoryKey: "politics",
+    en: {
+      title: "Diplomatic Push Seeks to Ease Tensions Over Red Sea Shipping Routes",
+      excerpt:
+        "International mediators are working to reduce disruptions to one of the world's busiest maritime corridors, where instability has rattled global trade.",
+      body: [
+        "Diplomatic efforts are under way to ease tensions surrounding the Red Sea, one of the world's most important shipping corridors, where disruptions have sent ripples through global trade. The narrow waterway carries a substantial share of international commerce between Europe, Asia, and beyond, making its stability a matter of worldwide concern.",
+        "Disruptions to Red Sea traffic force vessels to reroute around the southern tip of Africa, adding thousands of miles, days of transit time, and significant cost to journeys. Those added expenses ripple outward, raising shipping rates and contributing to price pressures on goods far from the region itself.",
+        "For countries along the Horn of Africa, the corridor's stability carries particular weight. The region sits astride vital sea lanes, and instability at sea intersects with security and economic interests on land. Governments in the area have a direct stake in seeing safe passage restored.",
+        "Mediators face a complex web of actors and grievances, and analysts caution against expecting a quick resolution. Yet the shared economic interest in open, secure shipping lanes gives many parties reason to seek de-escalation. How successfully that interest can be translated into stability will shape trade and security well beyond the waterway's shores.",
+      ],
+    },
+    so: {
+      title: "Dadaal Diblomaasiyadeed oo Doonaya inuu Dejiyo Xiisadda ku saabsan Marinnada Maraakiibta Badda Cas",
+      excerpt:
+        "Dhexdhexaadiyeyaal caalami ah ayaa ka shaqeynaya inay yareeyaan carqaladaha ku yimaadda mid ka mid ah marinnada badeed ee adduunka ugu mashquulka badan, halkaas oo xasillooni-darradu ay gilgishay ganacsiga caalamiga ah.",
+      body: [
+        "Dadaallo diblomaasiyadeed ayaa socda si loo dejiyo xiisadaha ku xeeran Badda Cas, oo ah mid ka mid ah marinnada maraakiibta ugu muhiimsan adduunka, halkaas oo carqaladuhu ay mowjado u direen ganacsiga caalamiga ah. Marinka cidhiidhiga ah wuxuu qaadaa qayb weyn oo ganacsiga caalamiga ah oo u dhexeeya Yurub, Aasiya, iyo wixii ka baxsan, taasoo xasilloonidiisa ka dhigaysa arrin caalamka oo dhan khuseysa.",
+        "Carqaladaha ku yimaadda socodka Badda Cas waxay ku qasbaan maraakiibta inay mareen agagaarka cirifka koonfureed ee Afrika, iyagoo ku daraya kumannaan mayl, maalmo waqti-gudub ah, iyo kharash weyn safarrada. Kharashyadaas dheeraadka ah waxay mowjad u baxaan dibadda, iyagoo kor u qaadaya heerarka maraakiibta oo gacan ka geysanaya cadaadis qiimo oo saameeya badeecado ka fog gobolka lafteeda.",
+        "Dalalka ku yaal Geeska Afrika, xasilloonida marinku waxay leedahay culeys gaar ah. Gobolku wuxuu ku fadhiyaa marinno badeed oo muhiim ah, xasillooni-darrada baddana waxay is-dhaafsataa amni iyo danaha dhaqaale ee dhulka. Dowladaha aaggu waxay si toos ah dan uga leeyihiin inay arkaan in marin ammaan ah la soo celiyo.",
+        "Dhexdhexaadiyeyaashu waxay wajahayaan shabakad adag oo qofaf iyo cabashooyin ah, falanqeeyayaashuna waxay ka digayaan in la filo xal degdeg ah. Haddana danta dhaqaale ee wadaagga ah ee marinno maraakiib oo furan oo ammaan ah waxay dhinacyo badan siisaa sabab ay ku raadiyaan dejin. Sida guul leh ee dantaas loogu turjumi karo xasillooni ayaa qaabeyn doonta ganacsiga iyo amniga si aad uga baxsan xeebaha marinka.",
+      ],
+    },
+    ar: {
+      title: "تحرك دبلوماسي يسعى لتهدئة التوترات حول طرق الشحن في البحر الأحمر",
+      excerpt:
+        "يعمل وسطاء دوليون على تقليل الاضطرابات في واحد من أكثر الممرات البحرية ازدحاماً في العالم، حيث زعزع عدم الاستقرار التجارة العالمية.",
+      body: [
+        "تجري جهود دبلوماسية لتهدئة التوترات المحيطة بالبحر الأحمر، أحد أهم ممرات الشحن في العالم، حيث أرسلت الاضطرابات موجات عبر التجارة العالمية. فالممر المائي الضيق يحمل حصة كبيرة من التجارة الدولية بين أوروبا وآسيا وما وراءهما، ما يجعل استقراره مصدر قلق عالمي.",
+        "تُجبر الاضطرابات في حركة البحر الأحمر السفن على تغيير مسارها حول الطرف الجنوبي لأفريقيا، ما يضيف آلاف الأميال وأياماً من وقت العبور وتكلفة كبيرة للرحلات. وتنتشر تلك النفقات الإضافية إلى الخارج، فترفع أسعار الشحن وتسهم في ضغوط الأسعار على بضائع بعيدة عن المنطقة نفسها.",
+        "بالنسبة لدول القرن الأفريقي، يحمل استقرار الممر وزناً خاصاً. فالمنطقة تقع على مقربة من ممرات بحرية حيوية، ويتقاطع عدم الاستقرار في البحر مع مصالح أمنية واقتصادية على البر. وللحكومات في المنطقة مصلحة مباشرة في رؤية العبور الآمن يُستعاد.",
+        "يواجه الوسطاء شبكة معقدة من الأطراف والمظالم، ويحذّر المحللون من توقع حل سريع. ومع ذلك، فإن المصلحة الاقتصادية المشتركة في ممرات شحن مفتوحة وآمنة تمنح أطرافاً كثيرة سبباً للسعي إلى التهدئة. وكيفية ترجمة تلك المصلحة بنجاح إلى استقرار ستشكّل التجارة والأمن إلى ما هو أبعد من شواطئ الممر المائي.",
+      ],
+    },
+  },
+
+  // ============ LOCAL NEWS 6 ============
+  {
+    categoryKey: "local-news",
+    en: {
+      title: "Solar Power Brings Electricity to Rural Somali Villages for the First Time",
+      excerpt:
+        "Off-grid solar installations are lighting homes, powering small businesses, and charging phones in communities that have never been connected to a central grid.",
+      body: [
+        "In villages across rural Somalia, solar power is bringing electricity to homes that have never been connected to any central grid. Small-scale installations — rooftop panels, shared micro-grids, and pay-as-you-go home systems — are lighting houses after dark, powering small businesses, and letting residents charge phones without long journeys to distant towns.",
+        "The appeal of solar is practical. Somalia has abundant sunshine, and building conventional grid infrastructure across a vast, dispersed, and often insecure territory is slow and expensive. Distributed solar sidesteps that problem, delivering power village by village and household by household without waiting for national infrastructure.",
+        "The effects reach beyond convenience. Reliable light extends the hours available for study and work. Refrigeration becomes possible for food and medicine. Phone charging keeps families connected to relatives, markets, and mobile-money services that have become central to daily economic life.",
+        "Barriers persist, chiefly the upfront cost of equipment and the challenge of maintenance and repair in remote areas. Pay-as-you-go financing models have helped lower the initial hurdle for many households. For communities long left in the dark, the arrival of even modest, reliable power marks a quiet but significant step forward.",
+      ],
+    },
+    so: {
+      title: "Tamarta Qorraxda oo Koronto u Keentay Tuulooyinka Miyiga Soomaaliyeed Markii ugu Horreysay",
+      excerpt:
+        "Rakibaadyada qorraxda ee ka baxsan shabakadda ayaa iftiiminaya guryaha, ku shaqeynaya ganacsiyada yaryar, oo dallacaya telefoonnada bulshooyinka aan waligood ku xirmin shabakad dhexe.",
+      body: [
+        "Tuulooyinka ku baahsan miyiga Soomaaliya, tamarta qorraxda ayaa koronto u keenaysa guryaha aan waligood ku xirmin shabakad dhexe. Rakibaadyo yaryar — alwaax saqafka ah, micro-grids la wadaago, iyo nidaamyo guri oo bixi-markaad-isticmaasho — ayaa iftiiminaya guryaha mugdiga ka dib, ku shaqeynaya ganacsiyada yaryar, oo u oggolaanaya dadka deggan inay dallacaan telefoonnada iyagoon safar dheer ku tegin magaalooyin fog.",
+        "Soo-jiidashada qorraxdu waa mid wax-ku-ool ah. Soomaaliya waxay leedahay qorrax badan, dhisidda kaabayaasha shabakadda caadiga ah ee dhul ballaadhan, kala firidhsan, oo inta badan aan ammaan ahayn waa mid gaabis ah oo qaali ah. Qorraxda la qeybiyay ayaa ka gudubta dhibaatadaas, iyadoo koronto u keenaysa tuulo-tuulo iyo guri-guri iyadoon la sugin kaabayaasha qaranka.",
+        "Saameynta ayaa ka gudubta habboonaanta. Iftiin la isku halleyn karo wuxuu kordhiyaa saacadaha loo heli karo waxbarashada iyo shaqada. Qaboojintu waxay suurtogal u noqotaa cuntada iyo daawada. Dallacaadda telefoonku waxay qoysaska ku xiraa qaraabada, suuqyada, iyo adeegyada lacagta mobaylka ee noqday kuwo udub-dhexaad u ah nolosha dhaqaale ee maalinlaha ah.",
+        "Caqabado ayaa sii jira, gaar ahaan kharashka hore ee qalabka iyo caqabadda dayactirka iyo hagaajinta meelaha fog. Moodooyinka maalgelinta bixi-markaad-isticmaasho ayaa gacan ka geystay hoos-u-dhigidda caqabadda hore ee qoysas badan. Bulshooyinka muddo dheer mugdiga looga tagay, imaatinka koronto xitaa yar oo la isku halleyn karo wuxuu calaamad u yahay tallaabo aamusan laakiin muhiim ah oo hore loo qaaday.",
+      ],
+    },
+    ar: {
+      title: "الطاقة الشمسية تجلب الكهرباء إلى القرى الصومالية الريفية للمرة الأولى",
+      excerpt:
+        "منشآت الطاقة الشمسية خارج الشبكة تضيء المنازل وتشغّل الأعمال الصغيرة وتشحن الهواتف في مجتمعات لم تتصل قط بشبكة مركزية.",
+      body: [
+        "في القرى في أنحاء الريف الصومالي، تجلب الطاقة الشمسية الكهرباء إلى منازل لم تتصل قط بأي شبكة مركزية. فالمنشآت الصغيرة — ألواح على الأسطح، وشبكات صغيرة مشتركة، وأنظمة منزلية بنظام الدفع حسب الاستخدام — تضيء البيوت بعد حلول الظلام، وتشغّل الأعمال الصغيرة، وتتيح للسكان شحن هواتفهم من دون رحلات طويلة إلى بلدات بعيدة.",
+        "جاذبية الطاقة الشمسية عملية. فالصومال يتمتع بوفرة من أشعة الشمس، وبناء بنية تحتية تقليدية للشبكة عبر إقليم شاسع ومتفرق وغالباً غير آمن بطيء ومكلف. والطاقة الشمسية الموزّعة تتجاوز تلك المشكلة، إذ توصّل الكهرباء قرية بقرية وأسرة بأسرة من دون انتظار البنية التحتية الوطنية.",
+        "تتجاوز الآثار مجرد الراحة. فالضوء الموثوق يمدّد الساعات المتاحة للدراسة والعمل. ويصبح التبريد ممكناً للطعام والدواء. ويُبقي شحن الهاتف الأسر على تواصل مع الأقارب والأسواق وخدمات الأموال عبر الهاتف التي باتت محورية في الحياة الاقتصادية اليومية.",
+        "تبقى العوائق قائمة، وأبرزها التكلفة الأولية للمعدات وتحدي الصيانة والإصلاح في المناطق النائية. وقد ساعدت نماذج التمويل بنظام الدفع حسب الاستخدام في خفض العقبة الأولى لكثير من الأسر. وبالنسبة لمجتمعات تُركت طويلاً في الظلام، يمثّل وصول طاقة موثوقة ولو متواضعة خطوة هادئة لكن مهمة إلى الأمام.",
+      ],
+    },
+  },
+
+  // ============ TECHNOLOGY 7 ============
+  {
+    categoryKey: "technology",
+    en: {
+      title: "AI Translation Tools Open New Doors — and Raise Questions — for Somali Speakers",
+      excerpt:
+        "Advances in machine translation are making the Somali language more accessible online, but researchers warn that low-resource languages still lag far behind.",
+      body: [
+        "Recent advances in artificial-intelligence translation are beginning to make the Somali language more accessible in digital spaces, offering the prospect of easier access to information, education, and services for tens of millions of speakers. Yet researchers caution that Somali, like many languages spoken across Africa, remains a low-resource language for which these tools work far less reliably than for widely-documented ones.",
+        "The core problem is data. Modern translation systems learn from vast quantities of text, and languages with abundant digital material online produce far better results. Somali, despite its many speakers, has a comparatively small digital footprint, which limits the quality of automated translation and can introduce errors that range from awkward to seriously misleading.",
+        "Efforts to close the gap are under way. Academic projects, open-source collaborations, and community-driven data collection aim to expand the digital resources available for Somali and other underrepresented languages. Advocates argue that language inclusion in AI is not a niche concern but a question of who gets to participate fully in an increasingly digital world.",
+        "The stakes are significant. As more services — from government information to healthcare guidance — move online and lean on automated language tools, the quality of translation shapes who can access them. For Somali speakers, better tools could mean broader access; poor ones could deepen exclusion. The technology's promise, researchers say, depends on the investment made in the languages it serves.",
+      ],
+    },
+    so: {
+      title: "Qalabka Turjumaadda AI-ga oo Albaabbo Cusub u Furaya — una Kiciya Su'aalo — Ku-hadlayaasha Soomaaliga",
+      excerpt:
+        "Horumarka turjumaadda mashiinku wuxuu ka dhigayaa afka Soomaaliga mid si fudud online loo heli karo, laakiin cilmi-baarayaashu waxay ka digayaan in afafka kheyraadka-yar ay weli si aad ah uga dib maraan.",
+      body: [
+        "Horumarrada dhawaan ka jira turjumaadda sirdoonka macmalka ah ayaa bilaabaya inay ka dhigaan afka Soomaaliga mid si fudud loo heli karo goobaha dijitaalka ah, iyagoo bixinaya rajada helitaan fudud oo macluumaad, waxbarasho, iyo adeegyo tobannaan malaayiin ku-hadal ah. Haddana cilmi-baarayaashu waxay ka digayaan in Soomaaligu, sida afaf badan oo lagaga hadlo Afrika, uu weli yahay af kheyraad-yar oo qalabkani ay uga shaqeeyaan si aad uga yar la-isku-halleynta kuwa si ballaadhan loo diiwaangeliyay.",
+        "Dhibaatada udub-dhexaadka ah waa xogta. Nidaamyada turjumaadda casriga ah waxay wax ka bartaan tiro aad u badan oo qoraal ah, afafka leh alaab dijitaal ah oo badan online ayaa soo saara natiijooyin aad u fiican. Soomaaliga, inkastoo ay badan yihiin ku-hadalyadiisu, wuxuu leeyahay raad dijitaal ah oo si isbarbardhig ah u yar, taasoo xaddidaysa tayada turjumaadda otomaatiga ah oo soo geli karta khaladaad u dhexeeya kuwo aan habboonayn ilaa kuwo si daran u marin-habaabinaya.",
+        "Dadaallo lagu xirayo farqiga ayaa socda. Mashaariic tacliimeed, iskaashi open-source ah, iyo ururinta xogta ee bulshadu wado ayaa ujeeddadoodu tahay inay balaadhiyaan kheyraadka dijitaalka ah ee loo heli karo Soomaaliga iyo afafka kale ee aan si buuxda loo matalin. U-doodayaashu waxay ku doodaan in ku-darsiga afafka ee AI-ga uusan ahayn welwel gaar ah laakiin su'aal ku saabsan cidda si buuxda uga qeyb qaadan karta adduun sii dijitaalaya.",
+        "Khatartu waa mid weyn. Marka adeegyo badan — laga bilaabo macluumaadka dowladda ilaa hagitaanka caafimaadka — ay online u guuraan oo ay ku tiirsadaan qalab af otomaatig ah, tayada turjumaaddu waxay qaabeysaa cidda heli karta. Ku-hadlayaasha Soomaaliga, qalab wanaagsan wuxuu la macno noqon karaa helitaan ballaadhan; kuwa liita waxay sii xoojin karaan ka-saarid. Ballanqaadka teknoolajiyada, cilmi-baarayaashu waxay yiraahdeen, wuxuu ku xiran yahay maalgelinta lagu sameeyo afafka uu u adeego.",
+      ],
+    },
+    ar: {
+      title: "أدوات الترجمة بالذكاء الاصطناعي تفتح أبواباً جديدة — وتثير أسئلة — للناطقين بالصومالية",
+      excerpt:
+        "تجعل التطورات في الترجمة الآلية اللغة الصومالية أكثر إتاحةً على الإنترنت، لكن الباحثين يحذّرون من أن اللغات محدودة الموارد لا تزال متأخرة كثيراً.",
+      body: [
+        "بدأت التطورات الأخيرة في الترجمة بالذكاء الاصطناعي تجعل اللغة الصومالية أكثر إتاحةً في الفضاءات الرقمية، ما يوفّر احتمال وصول أسهل إلى المعلومات والتعليم والخدمات لعشرات الملايين من الناطقين بها. ومع ذلك، يحذّر الباحثون من أن الصومالية، مثل لغات كثيرة يُتحدث بها في أنحاء أفريقيا، تبقى لغة محدودة الموارد تعمل هذه الأدوات معها بموثوقية أقل بكثير منها مع اللغات الموثّقة على نطاق واسع.",
+        "المشكلة الجوهرية هي البيانات. فأنظمة الترجمة الحديثة تتعلم من كميات هائلة من النصوص، واللغات ذات المواد الرقمية الوفيرة على الإنترنت تنتج نتائج أفضل بكثير. والصومالية، رغم كثرة الناطقين بها، لها بصمة رقمية صغيرة نسبياً، ما يحد من جودة الترجمة الآلية وقد يُدخل أخطاء تتراوح بين المربكة والمضللة بشكل خطير.",
+        "تجري جهود لسد الفجوة. فالمشاريع الأكاديمية، والتعاونات مفتوحة المصدر، وجمع البيانات الذي يقوده المجتمع تهدف إلى توسيع الموارد الرقمية المتاحة للصومالية وغيرها من اللغات الممثَّلة تمثيلاً ناقصاً. ويرى المدافعون أن إدماج اللغات في الذكاء الاصطناعي ليس شأناً هامشياً بل مسألة تتعلق بمن يستطيع المشاركة الكاملة في عالم يزداد رقمنة.",
+        "المخاطر كبيرة. فمع انتقال المزيد من الخدمات — من معلومات الحكومة إلى الإرشادات الصحية — إلى الإنترنت واعتمادها على أدوات لغوية آلية، تشكّل جودة الترجمة من يستطيع الوصول إليها. وبالنسبة للناطقين بالصومالية، قد تعني الأدوات الأفضل وصولاً أوسع؛ والرديئة قد تعمّق الإقصاء. ووعد التكنولوجيا، كما يقول الباحثون، يعتمد على الاستثمار المبذول في اللغات التي تخدمها.",
+      ],
+    },
+  },
+
+  // ============ INTERNATIONAL (politics) 7 ============
+  {
+    categoryKey: "politics",
+    en: {
+      title: "United Nations Warns of Widening Humanitarian Funding Shortfall",
+      excerpt:
+        "Aid agencies say a growing gap between needs and available funding is forcing painful choices, as crises multiply faster than donations can keep pace.",
+      body: [
+        "The United Nations and partner aid organisations have warned of a widening gap between humanitarian needs worldwide and the funding available to meet them. As conflicts, climate shocks, and displacement multiply across multiple regions, agencies say donations are failing to keep pace, forcing difficult decisions about who receives help and who goes without.",
+        "The shortfall has real consequences on the ground. Underfunded programmes have been forced to cut food rations, scale back medical services, and suspend support to some of the world's most vulnerable populations. Aid workers describe the painful arithmetic of rationing limited resources across needs that all appear urgent.",
+        "Several factors are converging. The number and severity of simultaneous crises has grown, while some traditional donor governments face budget pressures at home and shifting political priorities. The result is that appeals routinely close each year having raised only a fraction of what agencies say is required.",
+        "Humanitarian leaders have urged both a broadening of the donor base and greater investment in prevention and resilience, arguing that early action costs far less than emergency response. For the communities affected, however, the immediate reality is stark: as needs rise and funding lags, the margin between survival and catastrophe grows thinner.",
+      ],
+    },
+    so: {
+      title: "Qaramada Midoobay oo ka Digtay Yaraansho Maalgelin Bini'aadantinimo oo sii Ballaadhaneysa",
+      excerpt:
+        "Hay'adaha gargaarku waxay sheegayaan in farqi sii kordheysa oo u dhexeeya baahida iyo maalgelinta la heli karo uu ku qasbayo doorasho xanuun badan, iyadoo qalalaasyadu ay ku badanayaan si ka dhaqso badan inta deeqahu ay la socon karaan.",
+      body: [
+        "Qaramada Midoobay iyo hay'adaha gargaarka ee la-shaqeeyayaasha ah ayaa ka digay farqi sii ballaadhanaya oo u dhexeeya baahiyaha bini'aadantinimo ee adduunka oo dhan iyo maalgelinta loo heli karo si loo daboolo. Iyadoo colaadaha, naxdinta cimilada, iyo barakaca ay ku badanayaan gobollo badan, hay'aduhu waxay sheegayaan in deeqahu ay ku guuldareysanayaan inay la socdaan, taasoo ku qasbeysa go'aanno adag oo ku saabsan cidda gargaar hesha iyo cidda la'aan ah.",
+        "Yaraanshuhu wuxuu leeyahay cawaaqib dhab ah oo dhulka ah. Barnaamijyada aan si buuxda loo maalgelin ayaa lagu qasbay inay yareeyaan qaybaha cuntada, hoos u dhigaan adeegyada caafimaadka, oo hakiyaan taageerada qaar ka mid ah dadka adduunka ugu nugul. Shaqaalaha gargaarku waxay tilmaamaan xisaabta xanuunka badan ee qaybinta kheyraad xaddidan oo dhammaan baahiyo u muuqda kuwo degdeg ah.",
+        "Dhowr arrimood ayaa isku dhacaya. Tirada iyo darnaanta qalalaasyada isku mar ah ayaa kordhay, halka qaar ka mid ah dowladaha deeq-bixiyeyaasha dhaqameed ay wajahaan cadaadis miisaaniyadeed guriga iyo mudnaanta siyaasadeed oo isbeddeleysa. Natiijadu waxay tahay in codsiyada si joogto ah ay xiraan sannad kasta iyagoo kaliya ururiyay qayb yar oo ka mid ah waxa hay'aduhu sheegaan in loo baahan yahay.",
+        "Hoggaamiyeyaasha bini'aadantinimadu waxay ku booriyeen ballaadhinta saldhigga deeq-bixiyeyaasha iyo maalgelin dheeraad ah oo lagu sameeyo ka-hortagga iyo adkaysiga, iyagoo ku dooday in tallaabo hore ay ku kacdo wax aad uga yar jawaabta degdegga ah. Bulshooyinka la saameeyay, si kastaba ha ahaatee, xaqiiqada degdegga ah waa mid adag: marka baahidu kor u kacdo maalgelintuna ay ka dib maraan, xudduudka u dhexeeya badbaadada iyo masiibada ayaa sii khafiifaya.",
+      ],
+    },
+    ar: {
+      title: "الأمم المتحدة تحذّر من اتساع العجز في التمويل الإنساني",
+      excerpt:
+        "تقول وكالات الإغاثة إن فجوة متنامية بين الاحتياجات والتمويل المتاح تفرض خيارات مؤلمة، مع تكاثر الأزمات أسرع من قدرة التبرعات على مواكبتها.",
+      body: [
+        "حذّرت الأمم المتحدة ومنظمات الإغاثة الشريكة من اتساع الفجوة بين الاحتياجات الإنسانية حول العالم والتمويل المتاح لتلبيتها. فمع تكاثر النزاعات والصدمات المناخية والنزوح عبر مناطق متعددة، تقول الوكالات إن التبرعات تعجز عن المواكبة، ما يفرض قرارات صعبة بشأن من يتلقى المساعدة ومن يبقى من دونها.",
+        "للعجز عواقب حقيقية على الأرض. فقد اضطُرت البرامج ناقصة التمويل إلى خفض الحصص الغذائية، وتقليص الخدمات الطبية، وتعليق الدعم لبعض أكثر سكان العالم هشاشة. ويصف عمال الإغاثة الحساب المؤلم لتقنين موارد محدودة عبر احتياجات تبدو جميعها ملحّة.",
+        "تتضافر عدة عوامل. فقد ازداد عدد الأزمات المتزامنة وحدّتها، بينما تواجه بعض الحكومات المانحة التقليدية ضغوطاً على الميزانية في الداخل وأولويات سياسية متغيرة. والنتيجة أن النداءات تُغلق عادةً كل عام وقد جمعت جزءاً ضئيلاً فقط مما تقول الوكالات إنه مطلوب.",
+        "حثّ قادة العمل الإنساني على توسيع قاعدة المانحين وزيادة الاستثمار في الوقاية والقدرة على الصمود، بحجة أن العمل المبكر يكلّف أقل بكثير من الاستجابة الطارئة. لكن بالنسبة للمجتمعات المتضررة، فإن الواقع المباشر قاسٍ: فمع ارتفاع الاحتياجات وتخلّف التمويل، يزداد الهامش بين النجاة والكارثة ضيقاً.",
+      ],
+    },
+  },
+
+  // ============ LOCAL NEWS 7 ============
+  {
+    categoryKey: "local-news",
+    en: {
+      title: "Somali Universities Expand Programs to Meet Growing Demand for Skills",
+      excerpt:
+        "Higher-education institutions are broadening course offerings in engineering, health, and technology as a young population seeks the training a modernising economy requires.",
+      body: [
+        "Universities across Somalia are expanding their academic programmes, adding courses in fields such as engineering, health sciences, information technology, and business to meet growing demand from a young and ambitious population. The expansion reflects both a demographic reality — a large share of Somalis are under thirty — and the practical needs of a rebuilding economy.",
+        "For decades, higher education in Somalia was severely disrupted, and many who could afford it sought degrees abroad. In recent years, a resurgence of local institutions has begun to offer alternatives closer to home, though quality, accreditation, and resources vary widely across the sector.",
+        "Students and educators describe both opportunity and constraint. Demand for places far outstrips capacity at many institutions, and graduates entering the job market face an economy that cannot yet absorb all their ambitions. Aligning what universities teach with what employers need remains an ongoing challenge.",
+        "Still, the growth signals something important: an investment in human capital by families and institutions betting on the country's future. Educators argue that a skilled, locally-trained workforce is essential to development — that the engineers, health workers, and technologists trained today will shape what Somalia can build tomorrow.",
+      ],
+    },
+    so: {
+      title: "Jaamacadaha Soomaaliyeed oo Balaadhiya Barnaamijyada si ay ula Kulmaan Baahida sii Kordheysa ee Xirfadaha",
+      excerpt:
+        "Hay'adaha tacliinta sare ayaa ballaadhinaya bixinta koorsooyinka injineernimada, caafimaadka, iyo teknoolajiyada iyadoo dad dhalinyaro ah ay raadinayaan tababarka uu dhaqaale casriyeynaya u baahan yahay.",
+      body: [
+        "Jaamacadaha ku baahsan Soomaaliya ayaa ballaadhinaya barnaamijyadooda tacliimeed, iyagoo ku darsanaya koorsooyin ku saabsan qaybo ay ka mid yihiin injineernimada, sayniska caafimaadka, teknoolajiyada macluumaadka, iyo ganacsiga si ay ula kulmaan baahi sii kordheysa oo ka timaadda dad dhalinyaro ah oo hammi leh. Ballaadhintu waxay ka tarjumaysaa xaqiiqo tirokoob — qayb weyn oo Soomaalida ah ayaa ka yar soddon — iyo baahiyaha wax-ku-ool ah ee dhaqaale dib-u-dhisaya.",
+        "Muddo tobannaan sano ah, tacliinta sare ee Soomaaliya waxaa si daran loo carqaladeeyay, dad badan oo awoodi karayna waxay shahaadooyin ka raadsadeen dibadda. Sannadihii la soo dhaafay, soo-noqoshada hay'adaha maxalliga ah ayaa bilaabay inay bixiyaan xulashooyin guriga u dhow, inkastoo tayada, aqoonsiga, iyo kheyraadku ay si weyn ugu kala duwan yihiin qaybta.",
+        "Ardayda iyo macallimiintu waxay tilmaamaan fursad iyo xaddidaad labadaba. Baahida kuraasta ayaa si weyn uga sarreysa awoodda hay'ado badan, qalin-jabiyeyaasha soo gala suuqa shaqadana waxay wajahaan dhaqaale aan weli qaadi karin dhammaan hammigooda. Waafajinta waxa jaamacaduhu baraan iyo waxa shaqo-bixiyeyaashu u baahan yihiin ayaa weli ah caqabad socota.",
+        "Weli, koritaanku wuxuu tilmaamayaa wax muhiim ah: maalgelin lagu sameeyay raasumaalka aadanaha oo ay qoysaska iyo hay'aduhu ku sharadeen mustaqbalka dalka. Macallimiintu waxay ku doodaan in shaqaale xirfad leh oo maxalli ah loo tababaray uu lagama maarmaan u yahay horumarka — in injineerada, shaqaalaha caafimaadka, iyo teknoolajiyeyaasha maanta la tababaray ay qaabeyn doonaan waxa Soomaaliya berri dhisi karto.",
+      ],
+    },
+    ar: {
+      title: "الجامعات الصومالية توسّع برامجها لتلبية الطلب المتنامي على المهارات",
+      excerpt:
+        "توسّع مؤسسات التعليم العالي عروضها الدراسية في الهندسة والصحة والتكنولوجيا مع سعي سكان شباب إلى التدريب الذي يتطلبه اقتصاد يتحدّث.",
+      body: [
+        "توسّع الجامعات في أنحاء الصومال برامجها الأكاديمية، مضيفةً مقررات في مجالات مثل الهندسة والعلوم الصحية وتكنولوجيا المعلومات والأعمال لتلبية الطلب المتنامي من سكان شباب وطموحين. ويعكس هذا التوسع واقعاً ديموغرافياً — إذ إن حصة كبيرة من الصوماليين دون الثلاثين — والاحتياجات العملية لاقتصاد يعيد البناء.",
+        "لعقود، تعطّل التعليم العالي في الصومال بشدة، وسعى كثير ممن يستطيعون تحمّل تكلفته إلى شهادات في الخارج. وفي السنوات الأخيرة، بدأت عودة المؤسسات المحلية بتقديم بدائل أقرب إلى الوطن، وإن كانت الجودة والاعتماد والموارد تتفاوت على نطاق واسع عبر القطاع.",
+        "يصف الطلاب والمعلمون فرصةً وقيداً معاً. فالطلب على المقاعد يفوق كثيراً القدرة الاستيعابية في مؤسسات كثيرة، والخريجون الداخلون إلى سوق العمل يواجهون اقتصاداً لا يستطيع بعدُ استيعاب كل طموحاتهم. وتبقى مواءمة ما تُدرّسه الجامعات مع ما يحتاجه أصحاب العمل تحدياً مستمراً.",
+        "ومع ذلك، يشير النمو إلى شيء مهم: استثمار في رأس المال البشري من قبل أسر ومؤسسات تراهن على مستقبل البلاد. ويرى المعلمون أن قوة عاملة ماهرة مدرَّبة محلياً ضرورية للتنمية — وأن المهندسين والعاملين الصحيين والتقنيين الذين يُدرَّبون اليوم سيشكّلون ما يستطيع الصومال بناءه غداً.",
+      ],
+    },
+  },
+
+  // ============ TECHNOLOGY 8 ============
+  {
+    categoryKey: "technology",
+    en: {
+      title: "E-Commerce Slowly Takes Root in Somalia's Mobile-First Market",
+      excerpt:
+        "Online shopping is beginning to grow, built on mobile money and social media, even as logistics and trust remain significant hurdles.",
+      body: [
+        "Online commerce is slowly taking root in Somalia, growing on the foundation of the country's widespread mobile-money use and active social-media culture. Many transactions begin not on dedicated shopping platforms but through messaging apps and social networks, where sellers showcase goods and buyers arrange payment and delivery directly.",
+        "This informal model suits local conditions. With mobile money already ubiquitous, paying for goods digitally is second nature, and social platforms provide reach without the cost of building a storefront. For small traders, selling online has become an accessible way to expand beyond a physical market stall.",
+        "But scaling beyond informal sales runs into obstacles. Reliable delivery logistics are limited, formal addressing systems are patchy, and building trust between strangers transacting at a distance is difficult without established buyer protections. Disputes over undelivered or misrepresented goods can be hard to resolve.",
+        "Entrepreneurs and observers see potential for more structured e-commerce to emerge, perhaps blending the trust of social selling with better logistics and payment guarantees. Whether that materialises depends on solving the practical problems of moving goods and building confidence — the unglamorous infrastructure on which any digital marketplace ultimately rests.",
+      ],
+    },
+    so: {
+      title: "Ganacsiga Elektaroonigga ah oo si Tartiib ah u Xididaysanaya Suuqa Mobayl-hore ee Soomaaliya",
+      excerpt:
+        "Iibka onlaynka ah ayaa bilaabaya inuu koro, isagoo ku dhisan lacagta mobaylka iyo warbaahinta bulshada, xitaa iyadoo saadka iyo kalsoonidu ay weli yihiin caqabado waaweyn.",
+      body: [
+        "Ganacsiga onlaynka ah ayaa si tartiib ah ugu xididaysanaya Soomaaliya, isagoo ku koraya aasaaska isticmaalka baahsan ee dalka ee lacagta mobaylka iyo dhaqanka warbaahinta bulshada ee firfircoon. Macaamil badan ma bilaabmaan platform-yo iibsi oo gaar ah laakiin waxay ku bilaabmaan ab-abyada fariinaha iyo shabakadaha bulshada, halkaas oo iibiyeyaashu ay soo bandhigaan alaab iibsadayaashuna ay si toos ah u habeeyaan lacag-bixinta iyo keenista.",
+        "Moodalkan aan rasmiga ahayn wuxuu ku habboon yahay xaaladaha maxalliga ah. Iyadoo lacagta mobaylku ay mar hore meel walba joogto, bixinta alaabta si dijitaal ah waa dabeecad labaad, platform-yada bulshaduna waxay bixiyaan gaadhid iyada oo aan la bixin kharashka dhisidda dukaan. Ganacsatada yaryar, iibinta onlaynka ah waxay noqotay hab la heli karo oo lagu ballaadhiyo wax ka baxsan boos suuq oo jireed.",
+        "Laakiin ballaadhinta wax ka baxsan iibka aan rasmiga ahayn waxay la kulantaa caqabado. Saadka keenista ee la isku halleyn karo waa xaddidan yahay, nidaamyada cinwaanka rasmiga ah waa dhuun-dhuun, dhisidda kalsoonida u dhexeysa dad aan is-aqoon oo masaafo ka macaamilaya waa adag tahay iyada oo aan jirin ilaalin iibsade oo la aasaasay. Muranada ku saabsan alaab aan la keenin ama si khaldan loo sharraxay waxay noqon karaan kuwo adag in la xalliyo.",
+        "Ganacsato iyo goobjoogayaal waxay arkaan suurtogalnimada in ganacsi elektaroonig ah oo qaab-dhismeed leh uu soo baxo, laga yaabee inuu isku daro kalsoonida iibka bulshada iyo saad iyo dammaanad lacag-bixineed oo fiican. In taasi dhacdo iyo in kale waxay ku xiran tahay xallinta dhibaatooyinka wax-ku-ool ah ee guurinta alaabta iyo dhisidda kalsoonida — kaabayaasha aan quruxda badnayn ee ugu dambeyntii suuq kasta oo dijitaal ah uu ku tiirsan yahay.",
+      ],
+    },
+    ar: {
+      title: "التجارة الإلكترونية تترسّخ ببطء في سوق الصومال القائم على الهاتف أولاً",
+      excerpt:
+        "يبدأ التسوق عبر الإنترنت بالنمو، مبنياً على الأموال عبر الهاتف ووسائل التواصل الاجتماعي، حتى مع بقاء الخدمات اللوجستية والثقة عقبات كبيرة.",
+      body: [
+        "تترسّخ التجارة عبر الإنترنت ببطء في الصومال، نامية على أساس الاستخدام الواسع للأموال عبر الهاتف في البلاد وثقافة وسائل التواصل الاجتماعي النشطة. وتبدأ كثير من المعاملات لا على منصات تسوق مخصصة بل عبر تطبيقات المراسلة والشبكات الاجتماعية، حيث يعرض البائعون البضائع ويرتّب المشترون الدفع والتسليم مباشرةً.",
+        "يناسب هذا النموذج غير الرسمي الظروف المحلية. فمع انتشار الأموال عبر الهاتف أصلاً، بات الدفع مقابل البضائع رقمياً أمراً بديهياً، وتوفّر المنصات الاجتماعية وصولاً من دون تكلفة بناء متجر. وبالنسبة لصغار التجار، أصبح البيع عبر الإنترنت طريقة متاحة للتوسع إلى ما بعد كشك السوق المادي.",
+        "لكن التوسع إلى ما بعد المبيعات غير الرسمية يصطدم بعقبات. فالخدمات اللوجستية الموثوقة للتسليم محدودة، وأنظمة العنونة الرسمية متفرقة، وبناء الثقة بين غرباء يتعاملون عن بُعد صعب من دون حماية راسخة للمشتري. ويمكن أن يكون حل النزاعات حول بضائع لم تُسلَّم أو جرى تحريفها أمراً عسيراً.",
+        "يرى رواد الأعمال والمراقبون إمكانية ظهور تجارة إلكترونية أكثر تنظيماً، ربما تمزج ثقة البيع الاجتماعي بخدمات لوجستية وضمانات دفع أفضل. وتحقّق ذلك يعتمد على حل المشكلات العملية لنقل البضائع وبناء الثقة — البنية التحتية غير البرّاقة التي يرتكز عليها في النهاية أي سوق رقمية.",
+      ],
+    },
+  },
+
+  // ============ INTERNATIONAL (politics) 8 ============
+  {
+    categoryKey: "politics",
+    en: {
+      title: "Peacekeeping Transitions Prompt Debate Over Africa's Security Future",
+      excerpt:
+        "As international missions draw down across the continent, governments and analysts are debating who will fill the gap and how stability can be sustained.",
+      body: [
+        "The gradual drawdown of international peacekeeping and stabilisation missions across parts of Africa has prompted a broad debate about the continent's security future. As external forces reduce their presence or shift their mandates, governments face pressing questions about who will assume responsibility for security and how hard-won gains can be preserved.",
+        "The debate reflects a longer-running ambition: for African-led solutions to African security challenges. Regional organisations and national armies have increasingly taken on roles once filled by international missions, a shift many welcome in principle. In practice, however, capacity, funding, and coordination remain significant constraints.",
+        "The transitions carry risk. A drawdown that outpaces the readiness of local forces can create vacuums that armed groups exploit. Analysts warn that timelines driven by the budgets and politics of distant capitals do not always align with conditions on the ground, where the consequences of a premature withdrawal are borne locally.",
+        "Sustaining stability, many argue, requires more than troops — it depends on governance, economic opportunity, and institutions that can hold. The question facing the continent is not simply who provides security in the short term, but how to build the durable foundations that make large external missions unnecessary in the first place.",
+      ],
+    },
+    so: {
+      title: "Wareejinta Nabad-ilaalinta oo Kicisay Dood ku saabsan Mustaqbalka Amniga Afrika",
+      excerpt:
+        "Marka howlgallada caalamiga ah ay hoos u dhacayaan qaaradda oo dhan, dowladaha iyo falanqeeyayaashu waxay ka doodayaan cidda buuxin doonta farqiga iyo sida xasilloonida loo sii wadi karo.",
+      body: [
+        "Hoos-u-dhaca tartiibka ah ee howlgallada nabad-ilaalinta iyo xasillinta caalamiga ah ee qaybo ka mid ah Afrika ayaa kiciyay dood ballaadhan oo ku saabsan mustaqbalka amniga qaaradda. Marka ciidamada dibaddu ay yareeyaan joogitaankooda ama beddelaan hawlahooda, dowladuhu waxay wajahayaan su'aalo degdeg ah oo ku saabsan cidda qaadan doonta mas'uuliyadda amniga iyo sida faa'iidooyinka si adag loo helay loo ilaalin karo.",
+        "Dooddu waxay ka tarjumaysaa hammi muddo-dheer ah: xalal Afrikaan uu hoggaamiyo oo loogu talagalay caqabadaha amniga Afrika. Ururrada gobolka iyo ciidamada qaranka ayaa si sii kordheysa u qaatay doorar mar ay buuxin jireen howlgallada caalamiga ah, isbeddel dad badani ay mabda' ahaan soo dhoweeyaan. Ficil ahaan, si kastaba ha ahaatee, awoodda, maalgelinta, iyo isku-duubnidu waxay weli yihiin xaddidaado waaweyn.",
+        "Wareejintu waxay wataa khatar. Hoos-u-dhac ka dhaqso badan diyaargarowga ciidamada maxalliga ah ayaa abuuri kara meelo bannaan oo kooxuhu hubaysan ay ka faa'iidaystaan. Falanqeeyayaashu waxay ka digayaan in jadwalyada ay wadaan miisaaniyadaha iyo siyaasadaha caasimadaha fog ayan had iyo jeer la jaanqaadin xaaladaha dhulka ah, halkaas oo cawaaqibka ka-bixitaan hore la xambaaro maxalli ahaan.",
+        "Sii-wadista xasilloonida, dad badani waxay ku doodaan, waxay u baahan tahay wax ka badan ciidamo — waxay ku xiran tahay maamul, fursad dhaqaale, iyo hay'ado hayn kara. Su'aasha qaaradda wajahaysaa ma aha oo kaliya cidda bixisa amniga muddada gaaban, laakiin sida loo dhiso aasaasyada waara ee ka dhigaya howlgallada dibadeed ee waaweyn kuwo aan looga baahnayn meesha koowaad.",
+      ],
+    },
+    ar: {
+      title: "انتقالات حفظ السلام تثير نقاشاً حول مستقبل أمن أفريقيا",
+      excerpt:
+        "مع انسحاب البعثات الدولية عبر القارة، تتناقش الحكومات والمحللون حول من سيملأ الفراغ وكيف يمكن الحفاظ على الاستقرار.",
+      body: [
+        "أثار الانسحاب التدريجي لبعثات حفظ السلام والاستقرار الدولية عبر أجزاء من أفريقيا نقاشاً واسعاً حول مستقبل أمن القارة. فمع تقليص القوات الخارجية لوجودها أو تغيير مهامها، تواجه الحكومات أسئلة ملحّة حول من سيتولى مسؤولية الأمن وكيف يمكن الحفاظ على المكاسب التي تحققت بصعوبة.",
+        "يعكس النقاش طموحاً أطول أمداً: حلولاً بقيادة أفريقية للتحديات الأمنية الأفريقية. فقد تولّت المنظمات الإقليمية والجيوش الوطنية بشكل متزايد أدواراً كانت تملؤها البعثات الدولية، وهو تحول يرحّب به كثيرون من حيث المبدأ. لكن عملياً، تبقى القدرة والتمويل والتنسيق قيوداً كبيرة.",
+        "تحمل الانتقالات مخاطر. فالانسحاب الذي يسبق جاهزية القوات المحلية قد يخلق فراغات تستغلها الجماعات المسلحة. ويحذّر المحللون من أن الجداول الزمنية التي تحرّكها ميزانيات وسياسات عواصم بعيدة لا تتوافق دائماً مع الظروف على الأرض، حيث تُتحمّل عواقب الانسحاب المبكر محلياً.",
+        "الحفاظ على الاستقرار، كما يرى كثيرون، يتطلب أكثر من قوات — إذ يعتمد على الحوكمة والفرص الاقتصادية والمؤسسات القادرة على الصمود. والسؤال الذي يواجه القارة ليس ببساطة من يوفّر الأمن على المدى القصير، بل كيف تُبنى الأسس الدائمة التي تجعل البعثات الخارجية الكبيرة غير ضرورية من الأساس.",
+      ],
+    },
+  },
+
+  // ============ TECHNOLOGY 9 ============
+  {
+    categoryKey: "technology",
+    en: {
+      title: "Data Centers and Cloud Services Eye Expansion Into East Africa",
+      excerpt:
+        "As internet use surges across the region, providers are weighing investment in local data infrastructure to bring cloud services closer to users.",
+      body: [
+        "As internet use surges across East Africa, technology providers are increasingly weighing investment in local data centres and cloud infrastructure. Bringing this capacity closer to users promises faster services, greater reliability, and reduced dependence on facilities located on other continents.",
+        "For years, much of the data underpinning the region's digital services has been stored and processed far away, often in Europe. That distance introduces latency — a delay in how quickly services respond — and raises questions about resilience and data sovereignty. Local infrastructure could address all three.",
+        "The economics are becoming more favourable. Rising demand, improving connectivity through submarine cables, and growing digital economies make the region more attractive for the kind of long-term investment that data centres represent. Reliable power, however, remains a critical prerequisite, and one that is uneven across the region.",
+        "Analysts caution that infrastructure alone is not a strategy. Realising the benefits requires skilled workers to run these facilities, regulatory clarity around data, and demand from businesses and governments ready to move services into the cloud. If those pieces come together, local data infrastructure could become a quiet but important enabler of the region's digital growth.",
+      ],
+    },
+    so: {
+      title: "Xarumaha Xogta iyo Adeegyada Daruuraha oo Eegaya Balaadhin ku aaddan Bariga Afrika",
+      excerpt:
+        "Marka isticmaalka internetku uu kor u kacayo gobolka oo dhan, bixiyeyaashu waxay miisaamayaan maalgelin lagu sameeyo kaabayaasha xogta maxalliga ah si adeegyada daruuraha loogu soo dhoweeyo isticmaaleyaasha.",
+      body: [
+        "Marka isticmaalka internetku uu kor u kacayo Bariga Afrika, bixiyeyaasha teknoolajiyada ayaa si sii kordheysa u miisaamaya maalgelin lagu sameeyo xarumaha xogta maxalliga ah iyo kaabayaasha daruuraha. Soo-dhoweynta awooddan isticmaaleyaasha waxay ballanqaadaysaa adeegyo dhaqso badan, la-isku-halleyn wanaagsan, iyo hoos-u-dhac ku-tiirsanaanta xarumaha ku yaal qaaradaha kale.",
+        "Muddo sannado ah, xogta badan ee taageerta adeegyada dijitaalka ah ee gobolka waxaa lagu kaydin jiray oo lagu farsameyn jiray meel fog, inta badan Yurub. Masaafadaas waxay soo gelisaa daahitaan — dib-udhac ku yimaadda sida ay adeegyadu si dhaqso ah uga jawaabaan — waxayna kicisaa su'aalo ku saabsan adkaysiga iyo madaxbannaanida xogta. Kaabayaasha maxalliga ah ayaa xallin kara saddexdaba.",
+        "Dhaqaaluhu wuxuu noqonayaa mid ka roon. Baahida sii kordheysa, xiriirka sii hagaagaya ee fiilooyinka badda-hoosaadka ah, iyo dhaqaalayaasha dijitaalka ah ee sii kordhaya ayaa gobolka ka dhigaya mid soo jiidasho badan oo loogu talagalay nooca maalgelinta muddo-dheer ee xarumaha xogtu ay matalaan. Koronto la isku halleyn karo, si kastaba ha ahaatee, waxay weli tahay shuruud muhiim ah, mid aan siman gobolka oo dhan.",
+        "Falanqeeyayaashu waxay ka digayaan in kaabayaashu keligood aysan ahayn istaraatijiyad. Xaqiijinta faa'iidooyinka waxay u baahan tahay shaqaale xirfad leh oo maamula xarumahan, cadayn sharci oo ku saabsan xogta, iyo baahi ka timaadda ganacsiyada iyo dowladaha diyaar u ah inay adeegyada u guuriyaan daruuraha. Haddii qaybahaas ay isku yimaadaan, kaabayaasha xogta maxalliga ah waxay noqon karaan wax aamusan laakiin muhiim ah oo fududeeya koritaanka dijitaalka ee gobolka.",
+      ],
+    },
+    ar: {
+      title: "مراكز البيانات والخدمات السحابية تتطلع للتوسع في شرق أفريقيا",
+      excerpt:
+        "مع تصاعد استخدام الإنترنت في أنحاء المنطقة، يدرس مزوّدو الخدمات الاستثمار في البنية التحتية المحلية للبيانات لتقريب الخدمات السحابية من المستخدمين.",
+      body: [
+        "مع تصاعد استخدام الإنترنت في أنحاء شرق أفريقيا، يدرس مزوّدو التكنولوجيا بشكل متزايد الاستثمار في مراكز البيانات المحلية والبنية التحتية السحابية. وتقريب هذه السعة من المستخدمين يَعِد بخدمات أسرع وموثوقية أكبر واعتماد أقل على مرافق تقع في قارات أخرى.",
+        "لسنوات، جرى تخزين ومعالجة كثير من البيانات التي تقوم عليها الخدمات الرقمية في المنطقة في أماكن بعيدة، غالباً في أوروبا. وتُدخل تلك المسافة زمن استجابة — تأخيراً في سرعة استجابة الخدمات — وتثير أسئلة حول المرونة وسيادة البيانات. والبنية التحتية المحلية يمكن أن تعالج الثلاثة جميعاً.",
+        "تتحسن الجدوى الاقتصادية. فالطلب المتزايد، وتحسّن الاتصال عبر الكابلات البحرية، والاقتصادات الرقمية النامية تجعل المنطقة أكثر جاذبية لنوع الاستثمار الطويل الأمد الذي تمثّله مراكز البيانات. غير أن الكهرباء الموثوقة تبقى شرطاً أساسياً حاسماً، وهو شرط متفاوت عبر المنطقة.",
+        "يحذّر المحللون من أن البنية التحتية وحدها ليست استراتيجية. فتحقيق الفوائد يتطلب عمالاً مهرة لتشغيل هذه المرافق، ووضوحاً تنظيمياً حول البيانات، وطلباً من الشركات والحكومات المستعدة لنقل خدماتها إلى السحابة. وإذا اجتمعت تلك العناصر، فقد تصبح البنية التحتية المحلية للبيانات عاملاً هادئاً لكنه مهم في تمكين النمو الرقمي للمنطقة.",
+      ],
+    },
+  },
+
+  // ============ LOCAL NEWS 8 ============
+  {
+    categoryKey: "local-news",
+    en: {
+      title: "Restoration of Mogadishu's Historic Landmarks Sparks Renewed Civic Pride",
+      excerpt:
+        "Efforts to restore old buildings and public spaces in the capital are drawing residents back to a shared heritage long overshadowed by conflict.",
+      body: [
+        "In Mogadishu, efforts to restore historic buildings and public spaces are drawing residents back to a shared civic heritage long overshadowed by decades of conflict. Old structures that survived the years of upheaval are being repaired, and public squares once avoided are slowly returning to use.",
+        "The city carries deep layers of history, from its role as an ancient trading port to the distinctive architecture of later eras. Much was damaged or neglected during the long years of instability. For many residents, seeing these landmarks cared for again is about more than aesthetics — it is a reclaiming of identity and continuity.",
+        "Restoration is painstaking and often underfunded work, dependent on a mix of public initiative, private effort, and community involvement. Preservationists face difficult choices about what to prioritise and how to balance restoration with the pressing needs of a growing city that also requires new housing, services, and infrastructure.",
+        "Yet the symbolic weight is considerable. Each restored building and reopened space offers a visible sign that the city is not only rebuilding but remembering — knitting together past and present. For a generation that grew up amid ruin, these landmarks can serve as anchors, reminders that the city has a history worth carrying forward.",
+      ],
+    },
+    so: {
+      title: "Dib-u-cusboonaysiinta Calaamadaha Taariikhiga ah ee Muqdisho oo Kicisay Kibir Madani oo Cusub",
+      excerpt:
+        "Dadaallada lagu dib-u-cusboonaysiinayo dhismayaasha hore iyo goobaha dadweynaha ee caasimadda ayaa dib u soo celinaya dadka deggan hidde wadaag ah oo muddo dheer colaaddu hadhaysay.",
+      body: [
+        "Muqdisho, dadaallada lagu dib-u-cusboonaysiinayo dhismayaasha taariikhiga ah iyo goobaha dadweynaha ayaa dib u soo celinaya dadka deggan hidde madani oo wadaag ah oo muddo tobannaan sano oo colaad ah hadhaysay. Dhismayaashii hore ee ka badbaaday sannadihii kacdoonka ayaa la hagaajinayaa, fagaarayaashii dadweynaha ee mar laga fogaan jiray ayaa si tartiib ah dib ugu soo laabanaya isticmaal.",
+        "Magaaladu waxay xambaartaa lakabyo qoto dheer oo taariikh ah, laga bilaabo doorkeeda dekad ganacsi oo qadiim ah ilaa naqshadeynta gaarka ah ee xilliyadii dambe. Wax badan ayaa la dhaawacay ama la dayacay sannadihii dheeraa ee xasillooni-darrada. Dad badan oo deggan, arkista calaamadahan oo dib loo daryeelay waxay ka badan tahay quruxda — waa dib-u-qaadasho aqoonsi iyo sii-socod.",
+        "Dib-u-cusboonaysiintu waa shaqo taxaddar leh oo inta badan aan la maalgelin, oo ku tiirsan isku-dhafka hindise dadweyne, dadaal gaar ah, iyo ka-qaybgalka bulshada. Ilaaliyeyaashu waxay wajahayaan doorashooyin adag oo ku saabsan waxa la mudnaan siinayo iyo sida dib-u-cusboonaysiinta lagu dheellitiraa baahiyaha degdegga ah ee magaalo sii kortay oo sidoo kale u baahan guryo cusub, adeegyo, iyo kaabayaal.",
+        "Haddana culeyska astaanta ah waa mid weyn. Dhisme kasta oo la cusboonaysiiyay iyo goob dib loo furay waxay bixisaa calaamad muuqata oo ah in magaaladu aysan oo kaliya dib u dhisayn laakiin ay xasuusanayso — isku xirista hore iyo hadda. Jiil ku koray dhexe burbur, calaamadahani waxay u adeegi karaan barroosinno, xasuusinno ah in magaaladu leedahay taariikh mudan in la sii wado.",
+      ],
+    },
+    ar: {
+      title: "ترميم معالم مقديشو التاريخية يشعل فخراً مدنياً متجدداً",
+      excerpt:
+        "جهود ترميم المباني القديمة والأماكن العامة في العاصمة تعيد السكان إلى تراث مشترك طالما حجبه الصراع.",
+      body: [
+        "في مقديشو، تعيد جهود ترميم المباني التاريخية والأماكن العامة السكان إلى تراث مدني مشترك طالما حجبته عقود من الصراع. فالمباني القديمة التي نجت من سنوات الاضطراب تُرمَّم، والساحات العامة التي كانت تُتجنّب تعود ببطء إلى الاستخدام.",
+        "تحمل المدينة طبقات عميقة من التاريخ، من دورها ميناءً تجارياً قديماً إلى العمارة المميزة لعصور لاحقة. وقد تضرّر كثير منها أو أُهمل خلال سنوات عدم الاستقرار الطويلة. وبالنسبة لكثير من السكان، فإن رؤية هذه المعالم تُعتنى بها من جديد أمر يتجاوز الجماليات — إنه استعادة للهوية والاستمرارية.",
+        "الترميم عمل شاق وغالباً ناقص التمويل، يعتمد على مزيج من المبادرة العامة والجهد الخاص ومشاركة المجتمع. ويواجه دعاة الحفظ خيارات صعبة بشأن ما يُعطى الأولوية وكيفية الموازنة بين الترميم والاحتياجات الملحّة لمدينة نامية تحتاج أيضاً إلى مساكن وخدمات وبنية تحتية جديدة.",
+        "ومع ذلك، فإن الوزن الرمزي كبير. فكل مبنى مُرمَّم ومساحة أُعيد فتحها يقدّم علامة مرئية على أن المدينة لا تعيد البناء فحسب بل تتذكّر — تنسج معاً الماضي والحاضر. وبالنسبة لجيل نشأ وسط الخراب، يمكن أن تكون هذه المعالم مراسيَ، وتذكيرات بأن للمدينة تاريخاً يستحق المضي به قُدُماً.",
+      ],
+    },
+  },
+
 ];
- 
+
 // ---------------------------------------------------------------
 // Seed steps
 // ---------------------------------------------------------------
- 
+
 async function wipe() {
   await prisma.articleTag.deleteMany();
   await prisma.article.deleteMany();
@@ -437,15 +1062,11 @@ async function wipe() {
   await prisma.media.deleteMany();
   console.log("  cleared articles / categories / tags / media");
 }
- 
+
 async function seedAdmin() {
-  // The first admin you'll log in with. Override the password via the
-  // ADMIN_PASSWORD env var; otherwise a default is used (change it
-  // immediately after first login).
   const email = (process.env.ADMIN_EMAIL ?? "admin@newsroom.com").toLowerCase();
   const plain = process.env.ADMIN_PASSWORD ?? "Admin123!";
   const passwordHash = await bcrypt.hash(plain, 12);
- 
   const admin = await prisma.user.upsert({
     where: { email },
     update: { role: Role.ADMIN, passwordHash, isActive: true },
@@ -463,14 +1084,9 @@ async function seedAdmin() {
   console.log(`  admin: ${email}  (password: ${plain})`);
   return admin.id;
 }
- 
+
 async function seedAuthors() {
-  // Byline authors for the seeded articles. These also get a password
-  // (same default) so you can log in as any role while testing.
-  const passwordHash = await bcrypt.hash(
-    process.env.SEED_PASSWORD ?? "ChangeMe123!",
-    12,
-  );
+  const passwordHash = await bcrypt.hash(process.env.SEED_PASSWORD ?? "ChangeMe123!", 12);
   const ids: Record<string, string> = {};
   for (const a of AUTHORS) {
     const user = await prisma.user.upsert({
@@ -482,7 +1098,6 @@ async function seedAuthors() {
         authorSlug: a.slug,
         role: a.role,
         passwordHash,
-        isActive: true,
         emailVerified: new Date(),
         bio: `${a.name} writes for Newsroom.`,
       },
@@ -492,7 +1107,7 @@ async function seedAuthors() {
   }
   return ids;
 }
- 
+
 async function seedCategories() {
   const ids: Record<string, string> = {};
   for (const [order, c] of CATEGORIES.entries()) {
@@ -513,7 +1128,7 @@ async function seedCategories() {
   }
   return ids;
 }
- 
+
 /** Build one locale's translation payload for a given loop copy. */
 function buildTranslation(
   locale: Locale,
@@ -535,7 +1150,7 @@ function buildTranslation(
     readingTime: readingTime(contentText),
   };
 }
- 
+
 async function seedArticles(
   authorIds: Record<string, string>,
   categoryIds: Record<string, string>,
@@ -543,14 +1158,14 @@ async function seedArticles(
   const emails = AUTHORS.map((a) => a.email);
   const now = Date.now();
   let n = 0;
- 
+
   // 10 copies of each of the 9 source articles → 90 total.
-  for (let copy = 0; copy < 10; copy++) {
+  for (let copy = 0; copy < 1; copy++) {
     for (const article of ARTICLES) {
       const baseSlugEn = slugify(article.en.title);
       const baseSlugSo = slugify(article.so.title);
       const baseSlugAr = `article-ar-${slugify(article.en.title)}`; // ar titles have no latin chars → derive from en
- 
+
       const publishedAt = new Date(now - n * 6 * 3_600_000); // ~6h apart
       const status =
         n % 13 === 5
@@ -558,16 +1173,10 @@ async function seedArticles(
           : n % 17 === 7
             ? ArticleStatus.SCHEDULED
             : ArticleStatus.PUBLISHED;
- 
+
       const authorEmail = pick(emails);
       const authorId = authorIds[authorEmail];
- 
-      // Create the cover Media FIRST, then reference it by id. The
-      // Article→Media relation is defined on Article (coverImageId),
-      // and Media.uploaderId is required, so a media-first create is
-      // the unambiguous way to satisfy both. storageKey is unique, so
-      // it includes the global counter n to avoid collisions across
-      // the 90 rows.
+
       const cover = await prisma.media.create({
         data: {
           uploaderId: authorId,
@@ -581,7 +1190,7 @@ async function seedArticles(
           processed: true,
         },
       });
- 
+
       await prisma.article.create({
         data: {
           status,
@@ -594,7 +1203,7 @@ async function seedArticles(
           isBreaking: n % 11 === 3,
           authorId,
           categoryId: categoryIds[article.categoryKey],
-          coverImageId: cover.id, // scalar FK, matches your schema
+          coverImageId: cover.id, // <-- Replaced the broken nested create with this
           translations: {
             create: [
               buildTranslation(Locale.en, article.en, baseSlugEn, copy),
@@ -609,11 +1218,11 @@ async function seedArticles(
   }
   console.log(`  articles: ${n} created (9 sources × 10 copies)`);
 }
- 
+
 // ---------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------
- 
+
 async function main() {
   console.log("Seeding…");
   await wipe();
@@ -623,7 +1232,7 @@ async function main() {
   await seedArticles(authorIds, categoryIds);
   console.log("Seed complete.");
 }
- 
+
 main()
   .catch((e) => {
     console.error(e);
@@ -632,4 +1241,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
- 

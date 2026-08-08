@@ -69,7 +69,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // waiting for token expiry.
       if (trigger === "update" && token.id) {
         const fresh = await prisma.user.findUnique({
-          where: { id: token.id },
+          // FIX: explicitly cast token.id as a string for Prisma
+          where: { id: token.id as string },
           select: { role: true, isActive: true },
         });
         if (fresh) token.role = fresh.role;
@@ -78,8 +79,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as Role;
       }
       return session;
     },
@@ -125,7 +126,7 @@ export async function requireRole(allowed: Role[]): Promise<GuardResult> {
     };
   }
  
-  if (!allowed.includes(session.user.role)) {
+  if (!allowed.includes(session.user.role as Role)) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -139,7 +140,7 @@ export async function requireRole(allowed: Role[]): Promise<GuardResult> {
     ok: true,
     user: {
       id: session.user.id,
-      role: session.user.role,
+      role: session.user.role as Role,
       email: session.user.email,
       name: session.user.name,
     },

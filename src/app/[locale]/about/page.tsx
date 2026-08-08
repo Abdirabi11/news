@@ -8,7 +8,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const dict = await getDictionary(locale as AppLocale);
-  const title = `${dict.nav?.about ?? "About Us"} — ${dict.site.name}`;
+  const title = `${(dict.nav as Record<string, string | undefined>)?.about ?? "About Us"} — ${dict.site.name}`;
   const description =
     "Independent journalism on Somalia and the Horn of Africa: politics, regional developments, and technology.";
   return {

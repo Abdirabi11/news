@@ -32,7 +32,7 @@ export const slugSchema = z
  */
 export const tiptapDocSchema = z.object({
   type: z.literal("doc"),
-  content: z.array(z.record(z.unknown())).min(1, "Content cannot be empty."),
+  content: z.array(z.record(z.string(), z.unknown())).min(1, "Content cannot be empty."),
 });
  
 // ----------------------------------------------------------------

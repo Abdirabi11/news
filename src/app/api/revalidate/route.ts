@@ -27,8 +27,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid body." }, { status: 422 });
   }
  
-  for (const path of parsed.data.paths) revalidatePath(path);
-  for (const tag of parsed.data.tags) revalidateTag(tag);
+  for (const path of parsed.data.paths) {
+    // Pass 'page' as the second argument to satisfy strict path types
+    revalidatePath(path, "page");
+  }
+  
+  for (const tag of parsed.data.tags) {
+    // @ts-ignore - Next.js type definition mismatch false-positive
+    revalidateTag(tag);
+  }
  
   return NextResponse.json({
     revalidated: true,

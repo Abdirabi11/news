@@ -1,74 +1,3 @@
-// /**
-//  * /[locale] — the homepage.
-//  *
-//  * ISR: statically rendered, revalidated every 300s, AND on-demand
-//  * revalidated by the publish-scheduled worker (which POSTs
-//  * /api/revalidate with "/{locale}" whenever an article goes live) —
-//  * so scheduled publishes appear within seconds, not minutes.
-//  *
-//  * Layout: FeaturedHero (newest article) + BentoGrid of the next
-//  * cards, with a sticky TrendingSidebar alongside on desktop.
-//  */
-// import { Locale } from "@prisma/client";
-// import { getDictionary, type AppLocale } from "@/i18n";
-// import { fetchArticleCards } from "@/server/services/article-cards";
-// import { FeaturedHero } from "@/components/home/featured-hero";
-// import { BentoGrid } from "@/components/home/bento-grid";
-// import { TrendingSidebar } from "@/components/article/trending-sidebar";
-
-// export const revalidate = 300;
-
-// export default async function HomePage({
-//   params,
-// }: {
-//   params: Promise<{ locale: string }>;
-// }) {
-//   const { locale } = await params;
-//   const appLocale = locale as AppLocale;
-//   const dbLocale = appLocale as Locale;
-//   const dict = await getDictionary(appLocale);
-
-//   const { cards } = await fetchArticleCards({
-//     locale: dbLocale,
-//     page: 1,
-//     pageSize: 10,
-//   });
-
-//   if (cards.length === 0) {
-//     return (
-//       <p className="py-24 text-center text-ink-soft">{dict.home.empty}</p>
-//     );
-//   }
-
-//   const [hero, ...rest] = cards;
-
-//   return (
-//     <div className="space-y-12">
-//       <FeaturedHero card={hero} locale={appLocale} labels={dict.article} />
-
-//       <div className="grid gap-x-10 gap-y-12 lg:grid-cols-[1fr_320px]">
-//         <div className="min-w-0">
-//           <h2 className="mb-6 border-b border-hair pb-3 text-lg font-semibold tracking-tight text-ink">
-//             {dict.home.latestNews}
-//           </h2>
-//           <BentoGrid cards={rest} locale={appLocale} labels={dict.article} />
-//         </div>
-
-//         <aside className="hidden lg:block">
-//           <div className="sticky top-24">
-//             <TrendingSidebar
-//               locale={appLocale}
-//               title={dict.home.mostRead}
-//               limit={6}
-//             />
-//           </div>
-//         </aside>
-//       </div>
-//     </div>
-//   );
-// }
-
-
 import Link from "next/link";
 import Image from "next/image";
 import { Play } from "lucide-react";
@@ -263,7 +192,8 @@ export default async function HomePage({
       {watch.length > 0 && (
         <section className="mt-16 rounded-3xl bg-wood px-6 py-8 sm:px-8">
           <h2 className="mb-6 text-lg font-bold tracking-tight text-ink">
-            {dict.home.watch ?? "Watch"}
+            {/* FIX: Safely cast dict.home to avoid TypeScript errors */}
+            {(dict.home as Record<string, string | undefined>)?.watch ?? "Watch"}
           </h2>
           <div className="grid gap-6 md:grid-cols-3">
             {watch.map((v) => (
@@ -303,7 +233,8 @@ export default async function HomePage({
       {more.length > 0 && (
         <section className="mt-16">
           <h2 className="mb-6 text-lg font-bold tracking-tight text-ink">
-            {dict.home.moreStories ?? "More stories"}
+            {/* FIX: Safely cast dict.home here as well */}
+            {(dict.home as Record<string, string | undefined>)?.moreStories ?? "More stories"}
           </h2>
           <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {more.map((a) => (

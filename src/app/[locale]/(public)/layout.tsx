@@ -1,11 +1,6 @@
-/**
- * (public) route group layout — now composed from the news-portal
- * chrome (SiteHeader + SiteFooter). Replaces the earlier minimal
- * header/footer. Still a Server Component; the header fetches nav
- * data and renders client islands where needed.
- */
 import { Locale } from "@prisma/client";
-import { getDictionary, type AppLocale } from "@/i18n";
+import { notFound } from "next/navigation";
+import { getDictionary, isAppLocale, type AppLocale } from "@/i18n";
 import { navSections } from "@/server/services/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -18,7 +13,10 @@ export default async function PublicLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  if (!isAppLocale(locale)) notFound();
+
   const appLocale = locale as AppLocale; // validated by the root layout
+  // const dict = await getDictionary(appLocale);
 
   // Footer needs sections too; fetched here so the header's copy and
   // this one dedupe within the same render where possible.

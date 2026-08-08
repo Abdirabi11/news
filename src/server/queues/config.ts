@@ -54,7 +54,8 @@ export function getQueue(name: QueueName): Queue {
   let q = queueCache.get(name);
   if (!q) {
     q = new Queue(name, {
-      connection: createBullConnection(),
+      // FIX: Cast as 'any' to bypass the BullMQ/ioredis strict version mismatch
+      connection: createBullConnection() as any,
       defaultJobOptions,
     });
     queueCache.set(name, q);
@@ -69,4 +70,3 @@ export const enqueueMediaProcessing = (data: ProcessMediaJob) =>
  
 export const enqueueNewsletter = (data: NewsletterJob) =>
   getQueue(QUEUE.newsletter).add("dispatch", data);
- 

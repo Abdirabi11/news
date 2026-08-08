@@ -5,7 +5,7 @@ import { redisKeys } from "@/server/redis/client";
 import { rateLimit, rateLimitHeaders } from "@/server/redis/rate-limit";
 import { formatZodIssues } from "@/server/validators/article";
 import { presignMediaSchema } from "@/server/validators/media";
-import { buildStorageKey, presignUpload } from "@/server/services/storage";
+import { signUpload } from "@/server/services/storage";
  
 export const dynamic = "force-dynamic";
  
@@ -33,22 +33,20 @@ export async function POST(req: NextRequest) {
       { status: 422 },
     );
   }
-  const { filename, mimeType, sizeBytes } = parsed.data;
- 
+
   try {
-    const storageKey = buildStorageKey(filename, mimeType);
-    const uploadUrl = await presignUpload(storageKey, mimeType, sizeBytes);
+    // Generate Cloudinary upload signature
+    const signedData = signUpload({ folder: "newsroom" });
  
     return NextResponse.json(
-      { data: { uploadUrl, storageKey, expiresIn: 600 } },
+      { data: signedData },
       { headers: rateLimitHeaders(rl) },
     );
   } catch (err) {
     console.error("[POST /api/media/presign]", err);
     return NextResponse.json(
-      { error: "Could not create upload URL." },
+      { error: "Could not create upload signature." },
       { status: 500 },
     );
   }
 }
- 

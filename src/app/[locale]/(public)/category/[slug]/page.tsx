@@ -12,6 +12,7 @@ export const revalidate = 300;
 const PAGE_SIZE = 12;
 
 async function getCategory(slug: string, locale: Locale) {
+  // console.log("[getCategory] slug=%o locale=%o", slug, locale);
   return prisma.categoryTranslation.findUnique({
     where: { slug_locale: { slug, locale } },
     select: { name: true, description: true, categoryId: true },
@@ -25,7 +26,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isAppLocale(locale)) return {};
+
+  // locale is "en" | "so" | "ar" — already matches the lowercase Prisma enum.
   const category = await getCategory(slug, locale as Locale);
+
   if (!category) return {};
   return {
     title: category.name,
@@ -43,7 +47,11 @@ export default async function CategoryPage({
   const { locale, slug } = await params;
   const sp = await searchParams;
   if (!isAppLocale(locale)) notFound();
+
   const appLocale = locale as AppLocale;
+
+  // NO .toUpperCase(). The Locale enum is lowercase (en/so/ar); the URL
+  // segment is already lowercase; they match directly.
   const dbLocale = appLocale as Locale;
 
   const category = await getCategory(slug, dbLocale);

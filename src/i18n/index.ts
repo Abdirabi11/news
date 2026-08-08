@@ -1,3 +1,10 @@
+/**
+ * i18n utilities — locale constants + dictionary loader.
+ *
+ * Dictionaries hold UI CHROME strings only (buttons, labels, nav).
+ * Article content is never in dictionaries — it lives in the DB as
+ * ArticleTranslation rows.
+ */
 export const LOCALES = ["en", "so", "ar"] as const;
 export type AppLocale = (typeof LOCALES)[number];
 
@@ -31,8 +38,22 @@ const loaders: Record<AppLocale, () => Promise<Dictionary>> = {
   ar: () => import("./dictionaries/ar.json").then((m) => m.default),
 };
 
-export const getDictionary = (locale: AppLocale): Promise<Dictionary> =>
-  loaders[locale]();
+export const getDictionary = (locale: AppLocale): Promise<Dictionary> => {
+  const loader = loaders[locale];
+  if (!loader) {
+    // Turns a cryptic "loaders[locale] is not a function" into a clear
+    // signal that an invalid locale segment reached this function —
+    // which almost always means the locale middleware didn't run.
+    throw new Error(
+      `getDictionary: invalid locale ${JSON.stringify(
+        locale,
+      )}. Expected one of ${LOCALES.join(", ")}. ` +
+        `If this is a real route segment, the locale middleware likely isn't running ` +
+        `(is it at src/middleware.ts, not src/app/middleware.ts?).`,
+    );
+  }
+  return loader();
+};
 
 /** Locale-aware date formatting for publication dates. */
 export const formatDate = (date: Date, locale: AppLocale): string =>
@@ -41,7 +62,6 @@ export const formatDate = (date: Date, locale: AppLocale): string =>
     month: "long",
     year: "numeric",
   }).format(date);
-
 
 export function localeHref(locale: AppLocale, path: string = "/"): string {
   const p = path.startsWith("/") ? path : `/${path}`;

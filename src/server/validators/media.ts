@@ -11,7 +11,8 @@ export const presignMediaSchema = z.object({
   filename: z.string().min(1).max(255),
   mimeType: z
     .string()
-    .refine((m) => ALLOWED_IMAGE_TYPES.has(m), "Unsupported file type."),
+    // FIX: Changed .has() to .includes() because ALLOWED_IMAGE_TYPES is an Array
+    .refine((m) => ALLOWED_IMAGE_TYPES.includes(m), "Unsupported file type."),
   sizeBytes: z
     .number()
     .int()
@@ -29,7 +30,8 @@ export const registerMediaSchema = z.object({
     ),
   mimeType: z
     .string()
-    .refine((m) => ALLOWED_IMAGE_TYPES.has(m), "Unsupported file type."),
+    // FIX: Changed .has() to .includes() here too
+    .refine((m) => ALLOWED_IMAGE_TYPES.includes(m), "Unsupported file type."),
   sizeBytes: z.number().int().positive().max(MAX_UPLOAD_BYTES),
   width: z.number().int().positive().max(20_000).optional(),
   height: z.number().int().positive().max(20_000).optional(),
@@ -44,4 +46,3 @@ export const listMediaQuerySchema = z.object({
  
 export type PresignMediaInput = z.infer<typeof presignMediaSchema>;
 export type RegisterMediaInput = z.infer<typeof registerMediaSchema>;
- 

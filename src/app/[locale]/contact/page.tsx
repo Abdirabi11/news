@@ -10,7 +10,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const dict = await getDictionary(locale as AppLocale);
-  const title = `${dict.nav?.contact ?? "Contact"} — ${dict.site.name}`;
+ const title = `${(dict.nav as Record<string, string | undefined>)?.contact ?? "Contact"} — ${dict.site.name}`;
   const description =
     "Contact our newsroom — story tips, corrections, and general inquiries for Somalia and the Horn of Africa.";
   return { title, description, openGraph: { title, description } };
@@ -57,7 +57,7 @@ export default async function ContactPage({
     <div className="py-6">
       <header className="mx-auto max-w-3xl text-center">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-sage">
-          {dict.nav?.contact ?? "Contact"}
+          {(dict.nav as Record<string, string | undefined>)?.contact ?? "Contact"}
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight text-ink sm:text-5xl">
           Get in touch

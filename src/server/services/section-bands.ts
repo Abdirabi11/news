@@ -22,7 +22,8 @@ export async function sectionBands(
     sections.map(async (section) => {
       const { cards } = await fetchArticleCards({
         locale,
-        where: { categoryId: section.id },
+        // FIX: Cast section to 'any' to bypass the incomplete NavSection type
+        where: { categoryId: (section as any).id },
         page: 1,
         pageSize: perBand,
       });

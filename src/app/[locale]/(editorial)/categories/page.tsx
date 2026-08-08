@@ -1,52 +1,107 @@
-import { requireRole } from "@/lib/auth";
-import { Role } from "@prisma/client";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { FolderTree, Plus, Hash } from "lucide-react";
+import { Locale } from "@prisma/client";
 import { prisma } from "@/server/db/client";
+import { requireRolePage } from "@/lib/auth-guards";
+import { Role } from "@prisma/client";
+import { getDictionary, isAppLocale, localeHref, type AppLocale } from "@/i18n";
+import { EmptyState } from "@/components/admin/empty-state";
 
-export default async function AdminCategoriesPage({
+export const dynamic = "force-dynamic";
+
+export default async function CategoriesPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const guard = await requireRole([Role.ADMIN, Role.EDITOR]);
-  if (!guard.ok) return guard.response;
+  if (!isAppLocale(locale)) notFound();
+  const appLocale = locale as AppLocale;
+  const dbLocale = appLocale as Locale;
+
+  await requireRolePage([Role.ADMIN, Role.EDITOR]);
+  const dict = await getDictionary(appLocale);
 
   const categories = await prisma.category.findMany({
-    include: {
-      translations: true,
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      sortOrder: true,
       _count: { select: { articles: true } },
+      translations: {
+        where: { locale: dbLocale },
+        select: { name: true, slug: true },
+        take: 1,
+      },
     },
-    orderBy: { createdAt: "desc" },
   });
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold font-serif">Categories Management</h1>
-      </div>
-      <div className="bg-amber-50/50 dark:bg-neutral-900 border border-amber-900/10 rounded-lg overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-amber-100/50 dark:bg-neutral-800 text-xs uppercase font-semibold">
-            <tr>
-              <th className="p-3">Slug</th>
-              <th className="p-3">Name ({locale})</th>
-              <th className="p-3">Articles</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-amber-900/10">
-            {categories.map((cat) => {
-              const trans = cat.translations.find((t) => t.locale === locale) || cat.translations[0];
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <header className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-sage">
+            {(dict.nav as Record<string, string | undefined>)?.admin ?? "Admin"}
+          </p>
+          <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight text-ink">
+            Categories
+          </h1>
+        </div>
+        <Link
+          href={localeHref(appLocale, "/categories/new")}
+          className="inline-flex items-center gap-2 rounded-full bg-sage px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sage-hover"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          New category
+        </Link>
+      </header>
+
+      {categories.length === 0 ? (
+        <EmptyState
+          icon={FolderTree}
+          title="No categories yet"
+          description="Categories organise your coverage into sections like Politics, Technology, and Local News. Create your first one to get started."
+          actionLabel="Create a category"
+          actionHref={localeHref(appLocale, "/categories/new")}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-3xl bg-surface shadow-soft">
+          <ul>
+            {categories.map((c, i) => {
+              const name = c.translations[0]?.name ?? "(untranslated)";
+              const slug = c.translations[0]?.slug;
               return (
-                <tr key={cat.id}>
-                  <td className="p-3 font-mono text-xs">{cat.slug}</td>
-                  <td className="p-3 font-medium">{trans?.name ?? "—"}</td>
-                  <td className="p-3">{cat._count.articles}</td>
-                </tr>
+                <li key={c.id}>
+                  <Link
+                    href={localeHref(appLocale, `/categories/${c.id}`)}
+                    className={`flex items-center gap-4 px-6 py-4 transition hover:bg-canvas ${
+                      i > 0 ? "border-t border-hair" : ""
+                    }`}
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sage-soft text-sage">
+                      <FolderTree className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-ink">{name}</p>
+                      {slug && (
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted">
+                          <Hash className="h-3 w-3" aria-hidden />
+                          {slug}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm text-ink-muted">
+                      {c._count.articles}{" "}
+                      {c._count.articles === 1 ? "article" : "articles"}
+                    </span>
+                  </Link>
+                </li>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

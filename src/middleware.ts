@@ -18,8 +18,8 @@ function withLocalePrefix(locale: string, pathname: string): string {
   return pathname === "/" ? `/${locale}` : `/${locale}${pathname}`;
 }
 
-// FIX: Changed from "proxy" to "middleware"
 export function middleware(req: NextRequest) {
+
   const { pathname, search } = req.nextUrl;
   const seg = firstSegment(pathname);
 
@@ -58,8 +58,18 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Exclude: API routes, Next internals, root-level static files that
-    // have no locale variant, and common static asset extensions.
-    "/((?!api|_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|css|js|map|woff2?|ttf)$).*)",
+     /*
+     * Match all paths EXCEPT:
+     *  - api routes (never need locale rewriting)
+     *  - _next/static, _next/image (build assets)
+     *  - _next/data (client-nav data requests already carry locale)
+     *  - favicon, robots, sitemap, manifest (root static files)
+     *  - anything with a file extension (.jpg, .css, .woff2, .xml …)
+     *
+     * The trailing (?!...) negative lookahead on the extension is the
+     * key: it stops the middleware firing on every image and font,
+     * which is where most of the "firing constantly" overhead comes from.
+     */
+    "/((?!api|_next/static|_next/image|_next/data|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.[\\w]+$).*)",
   ],
 };

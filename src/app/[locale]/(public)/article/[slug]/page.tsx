@@ -5,12 +5,14 @@ import type { Metadata } from "next";
 import { Locale, ArticleStatus } from "@prisma/client";
 import { type JSONContent } from "@tiptap/react";
 import { prisma } from "@/server/db/client";
+import { cache } from "react";
 import {
   getDictionary,
   formatDate,
   isAppLocale,
   localeHref,
   localeUrl,
+  LOCALES,
   type AppLocale,
 } from "@/i18n";
 import { RichContent } from "@/components/article/rich-content";
@@ -18,15 +20,35 @@ import { ViewTracker } from "@/components/article/view-tracker";
 import { NewsArticleJsonLd } from "@/components/seo/news-article-jsonld";
 
 export const revalidate = 300;
+export const dynamicParams = true;
 
 // ----------------------------------------------------------------
-// Shared fetch (used by both the page and generateMetadata; Next
-// deduplicates identical Prisma calls per request via React cache
-// only for fetch(), so keep it to one helper both call — the query
-// runs twice at build/revalidate time, which is fine for ISR).
+// generateStaticParams
 // ----------------------------------------------------------------
+// export async function generateStaticParams() {
+//   const rows = await prisma.articleTranslation.findMany({
+//     where: { article: { status: ArticleStatus.PUBLISHED } },
+//     select: { slug: true, locale: true },
+//     take: 500,
+//     orderBy: { article: { publishedAt: "desc" } },
+//   });
 
-async function getArticle(slug: string, locale: Locale) {
+//   return rows
+//     .filter((r) => (LOCALES as readonly string[]).includes(r.locale))
+//     .map((r) => ({ locale: r.locale, slug: r.slug }));
+// }
+
+export async function generateStaticParams() {
+  // Returning an empty array stops Next.js from hammering the database during build.
+  // Because `dynamicParams = true` is set, articles will safely generate on-demand
+  // the first time a user visits them, and then stay cached as fast static pages!
+  return [];
+}
+
+// ----------------------------------------------------------------
+// Shared fetch wrapped in React cache()
+// ----------------------------------------------------------------
+const getArticle = cache(async (slug: string, locale: Locale) => {
   const translation = await prisma.articleTranslation.findUnique({
     where: { slug_locale: { slug, locale } },
     include: {
@@ -44,8 +66,6 @@ async function getArticle(slug: string, locale: Locale) {
               },
             },
           },
-          // Sibling translations -> hreflang alternates + future
-          // path-preserving locale switching.
           translations: { select: { locale: true, slug: true } },
         },
       },
@@ -55,12 +75,11 @@ async function getArticle(slug: string, locale: Locale) {
   if (!translation) return null;
   if (translation.article.status !== ArticleStatus.PUBLISHED) return null;
   return translation;
-}
+});
 
 // ----------------------------------------------------------------
 // Metadata
 // ----------------------------------------------------------------
-
 export async function generateMetadata({
   params,
 }: {
@@ -75,7 +94,6 @@ export async function generateMetadata({
   const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
   const url = localeUrl(siteUrl, locale as AppLocale, `/article/${t.slug}`);
 
-  // hreflang alternates, built from sibling translations.
   const languages = Object.fromEntries(
     t.article.translations.map((sibling) => [
       sibling.locale,
@@ -115,7 +133,6 @@ export async function generateMetadata({
 // ----------------------------------------------------------------
 // Page
 // ----------------------------------------------------------------
-
 export default async function ArticlePage({
   params,
 }: {
@@ -142,10 +159,8 @@ export default async function ArticlePage({
 
   return (
     <article className="mx-auto max-w-2xl">
-      {/* View beacon — client-side, so ISR cache hits are counted too */}
       <ViewTracker articleId={t.articleId} />
 
-      {/* Structured data for Google News / rich results */}
       <NewsArticleJsonLd
         headline={t.title}
         url={url}
@@ -163,7 +178,6 @@ export default async function ArticlePage({
         section={category?.name}
       />
 
-      {/* Kicker: breaking flag + category */}
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
         {article.isBreaking && (
           <span className="rounded bg-red-600 px-1.5 py-0.5 text-white">
@@ -180,7 +194,6 @@ export default async function ArticlePage({
         )}
       </p>
 
-      {/* Headline & standfirst */}
       <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-zinc-900 sm:text-4xl">
         {t.title}
       </h1>
@@ -190,7 +203,6 @@ export default async function ArticlePage({
         </p>
       )}
 
-      {/* Byline */}
       <div className="mt-6 flex items-center gap-3 border-y border-zinc-200 py-4 text-sm">
         {article.author.image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -229,7 +241,6 @@ export default async function ArticlePage({
         </div>
       </div>
 
-      {/* Cover image — the LCP candidate, hence next/image + priority */}
       {article.coverImage && (
         <figure className="mt-6">
           <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-zinc-100">
@@ -250,7 +261,6 @@ export default async function ArticlePage({
         </figure>
       )}
 
-      {/* Body — whitelist-based Tiptap JSON renderer */}
       <div className="mt-8">
         <RichContent content={t.content as JSONContent} />
       </div>

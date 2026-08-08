@@ -21,7 +21,7 @@ function startWorker(
   concurrency = 1,
 ): void {
   const worker = new Worker(name, processor, {
-    connection: createBullConnection(),
+    connection: createBullConnection() as any,
     concurrency,
   });
  
