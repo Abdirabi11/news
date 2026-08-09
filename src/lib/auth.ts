@@ -13,6 +13,9 @@ const credentialsSchema = z.object({
 });
  
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // FIX: Explicitly tell Auth.js to trust Vercel's proxy host
+  trustHost: true,
+  
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
