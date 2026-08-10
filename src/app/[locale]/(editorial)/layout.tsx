@@ -87,7 +87,7 @@ export default async function EditorialLayout({
             <Newspaper className="h-4 w-4" aria-hidden />
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-semibold tracking-tight">Newsroom</p>
+            <p className="text-sm font-semibold tracking-tight">Lower Shabelle Media</p>
             <p className="text-[11px] uppercase tracking-wider text-zinc-400">
               Editorial desk
             </p>

@@ -32,7 +32,7 @@ export function generateStaticParams() {
 }
 
 export const metadata = {
-  title: { default: "Newsroom", template: "%s — Newsroom" },
+  title: { default: "LowerShabelle Media", template: "%s — LowerShabelle Media" },
 };
 
 export default async function RootLayout({

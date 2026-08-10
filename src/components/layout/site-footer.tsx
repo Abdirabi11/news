@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Newspaper } from "lucide-react";
+import Image from "next/image";
 import type { NavSection } from "@/server/services/navigation";
 import {
   LOCALES,
@@ -29,13 +29,14 @@ export function SiteFooter({
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand + newsletter (spans 2) */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand text-white">
-                <Newspaper className="h-4 w-4" aria-hidden />
-              </span>
-              <span className="font-serif text-lg font-bold text-ink">
-                {dict.site.name}
-              </span>
+            <div className="flex items-center">
+              <Image
+                src="/logo.svg"
+                alt={dict.site.name}
+                width={200}
+                height={44}
+                className="h-10 w-auto"
+              />
             </div>
             <p className="mt-3 max-w-xs text-sm text-ink-soft">
               {dict.site.tagline}

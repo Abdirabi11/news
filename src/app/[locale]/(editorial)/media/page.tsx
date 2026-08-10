@@ -1,6 +1,6 @@
 import { MediaLibrary } from "@/components/editorial/media-library";
 
-export const metadata = { title: "Media — Newsroom" };
+export const metadata = { title: "Media — Lower Shabelle Media" };
 
 export default function MediaPage() {
   return (

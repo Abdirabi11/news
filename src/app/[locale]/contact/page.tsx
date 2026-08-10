@@ -12,7 +12,7 @@ export async function generateMetadata({
   const dict = await getDictionary(locale as AppLocale);
  const title = `${(dict.nav as Record<string, string | undefined>)?.contact ?? "Contact"} — ${dict.site.name}`;
   const description =
-    "Contact our newsroom — story tips, corrections, and general inquiries for Somalia and the Horn of Africa.";
+    "Contact our Lower Shabelle Media — story tips, corrections, and general inquiries for Somalia and the Horn of Africa.";
   return { title, description, openGraph: { title, description } };
 }
 
@@ -28,18 +28,18 @@ const CONTACTS = [
     icon: Newspaper,
     tint: "bg-terracotta-soft text-terracotta",
     label: "News Tips",
-    lines: ["tips@newsroom.so", "Confidential — for story leads and documents"],
+    lines: ["tips@lowershabelle.com", "Confidential — for story leads and documents"],
   },
   {
     icon: Mail,
     tint: "bg-amber-soft text-amber",
     label: "General Inquiries",
-    lines: ["hello@newsroom.so", "Partnerships, feedback, and corrections"],
+    lines: ["hello@lowershabelle.com", "Partnerships, feedback, and corrections"],
   },
   {
     icon: Phone,
     tint: "bg-sage-soft text-sage",
-    label: "Newsroom Desk",
+    label: "Lower Shabelle Desk",
     lines: ["+252 61 000 0000", "Sunday–Thursday, 9:00–17:00 EAT"],
   },
 ];

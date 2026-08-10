@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Locale } from "@prisma/client";
 import { getDictionary, localeHref, type AppLocale } from "@/i18n";
@@ -25,11 +26,18 @@ export async function SiteHeader({ locale }: { locale: AppLocale }) {
           {/* Wordmark */}
           <Link
             href={localeHref(locale, "/")}
-            className="shrink-0 text-lg font-semibold tracking-tight text-ink transition-colors hover:text-accent"
+            aria-label={dict.site.name}
+            className="shrink-0 transition-opacity hover:opacity-80"
           >
-            {dict.site.name}
+            <Image
+              src="/logo.svg"
+              alt={dict.site.name}
+              width={180}
+              height={40}
+              priority
+              className="h-8 w-auto sm:h-9"
+            />
           </Link>
-
           {/* Interactive nav (client) */}
           <HeaderNav locale={locale} links={links} dict={dict} />
 

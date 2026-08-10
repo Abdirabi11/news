@@ -114,7 +114,7 @@ export async function generateMetadata({
       url,
       title,
       description,
-      siteName: "Newsroom",
+      siteName: "Lower Shabelle Media",
       publishedTime: t.article.publishedAt?.toISOString(),
       modifiedTime: t.updatedAt.toISOString(),
       authors: t.article.author.name ? [t.article.author.name] : undefined,

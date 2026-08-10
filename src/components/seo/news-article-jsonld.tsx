@@ -29,7 +29,7 @@ interface NewsArticleJsonLdProps {
   section?: string;
 }
 
-const SITE_NAME = "Newsroom";
+const SITE_NAME = "Lower Shabelle Media";
 
 export function NewsArticleJsonLd({
   headline,

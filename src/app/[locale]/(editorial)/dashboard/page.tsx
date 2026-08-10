@@ -169,7 +169,7 @@ export default async function DashboardPage({
           {greeting}, {firstName}
         </h1>
         <p className="mt-2 text-ink-soft">
-          Here&apos;s what&apos;s happening across the newsroom today.
+          Here&apos;s what&apos;s happening across the Lower Shabelle Media today.
         </p>
       </header>
 
