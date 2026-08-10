@@ -171,7 +171,7 @@ export default async function HomePage({
           </h2>
           <ul className="space-y-5">
             {opinion.map((a) => (
-              <li key={a.id} className="rounded-2xl bg-surface p-5">
+              <li key={a.id} className="rounded-xl bg-surface p-4 sm:rounded-2xl sm:p-5">
                 <Link href={href(a.slug)} className="block">
                   <h3 className="text-[15px] font-semibold leading-snug text-ink">
                     {a.title}
@@ -190,7 +190,7 @@ export default async function HomePage({
 
       {/* 2. Multimedia band — warm surface, play affordance (option b) */}
       {watch.length > 0 && (
-        <section className="mt-16 rounded-3xl bg-wood px-6 py-8 sm:px-8">
+        <section className="mt-12 rounded-2xl bg-wood p-5 sm:mt-16 sm:rounded-3xl sm:px-8 sm:py-8">
           <h2 className="mb-6 text-lg font-bold tracking-tight text-ink">
             {/* FIX: Safely cast dict.home to avoid TypeScript errors */}
             {(dict.home as Record<string, string | undefined>)?.watch ?? "Watch"}
@@ -231,7 +231,7 @@ export default async function HomePage({
 
       {/* 3. More stories — bento grid */}
       {more.length > 0 && (
-        <section className="mt-16">
+        <section className="mt-12 sm:mt-16">
           <h2 className="mb-6 text-lg font-bold tracking-tight text-ink">
             {/* FIX: Safely cast dict.home here as well */}
             {(dict.home as Record<string, string | undefined>)?.moreStories ?? "More stories"}

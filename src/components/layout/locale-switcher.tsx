@@ -35,19 +35,17 @@ export function LocaleSwitcher({ current }: { current: AppLocale }) {
             key={l}
             aria-current="true"
             title={LOCALE_NAMES[l]}
-            className="rounded bg-indigo-700 px-2 py-1 text-xs font-semibold uppercase text-white"
+            className="rounded bg-accent px-2 py-1 text-xs font-semibold uppercase text-white"
           >
             {l}
           </span>
         ) : (
           <Link
             key={l}
-            // prefetch off: the target is a redirecting API route,
-            // and prefetching it would fire DB lookups on hover.
             prefetch={false}
             href={`/api/locale-switch?to=${l}&path=${encodeURIComponent(fullPath)}`}
             title={LOCALE_NAMES[l]}
-            className="rounded px-2 py-1 text-xs font-semibold uppercase text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800"
+            className="rounded px-2 py-1 text-xs font-semibold uppercase text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
           >
             {l}
           </Link>
