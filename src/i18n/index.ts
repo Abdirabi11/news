@@ -43,13 +43,13 @@ export const getDictionary = (locale: AppLocale): Promise<Dictionary> => {
   if (!loader) {
     // Turns a cryptic "loaders[locale] is not a function" into a clear
     // signal that an invalid locale segment reached this function —
-    // which almost always means the locale middleware didn't run.
+    // which almost always means the locale proxy didn't run.
     throw new Error(
       `getDictionary: invalid locale ${JSON.stringify(
         locale,
       )}. Expected one of ${LOCALES.join(", ")}. ` +
-        `If this is a real route segment, the locale middleware likely isn't running ` +
-        `(is it at src/middleware.ts, not src/app/middleware.ts?).`,
+        `If this is a real route segment, the locale proxy likely isn't running ` +
+        `(is it at src/proxy.ts, not src/app/proxy.ts?).`,
     );
   }
   return loader();

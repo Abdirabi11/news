@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { Upload, Loader2, ImageOff, Check } from "lucide-react";
 
 export interface MediaItem {
@@ -14,6 +19,11 @@ export interface MediaItem {
   createdAt: string;
 }
 
+interface MediaPage {
+  data: MediaItem[];
+  meta: { page: number; totalPages: number };
+}
+
 interface MediaLibraryProps {
   /** Picker mode: called when the user chooses an item. */
   onSelect?: (item: MediaItem) => void;
@@ -24,50 +34,59 @@ interface MediaLibraryProps {
 const ACCEPTED = "image/jpeg,image/png,image/webp,image/avif,image/gif";
 const MAX_BYTES = 10 * 1024 * 1024;
 
+const QUERY_KEY = ["media-library"];
+
+async function fetchMediaPage(page: number): Promise<MediaPage> {
+  const res = await fetch(`/api/media?page=${page}&pageSize=24`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 export function MediaLibrary({ onSelect, compact = false }: MediaLibraryProps) {
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async (pageToLoad: number, append: boolean) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/media?page=${pageToLoad}&pageSize=24`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await res.json();
-      setItems((prev) => (append ? [...prev, ...body.data] : body.data));
-      setTotalPages(body.meta.totalPages);
-      setPage(pageToLoad);
-    } catch {
-      setError("Could not load the media library. Refresh to retry.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Data fetching lives in react-query rather than an effect: this
+  // component mounts/unmounts repeatedly (it's also used inline as a
+  // modal picker in the article editor), so the shared query cache
+  // avoids re-fetching page 1 every time the picker re-opens.
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    isError,
+  } = useInfiniteQuery({
+    queryKey: QUERY_KEY,
+    queryFn: ({ pageParam }) => fetchMediaPage(pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.totalPages
+        ? lastPage.meta.page + 1
+        : undefined,
+  });
 
-  useEffect(() => {
-    void load(1, false);
-  }, [load]);
+  const items = data?.pages.flatMap((p) => p.data) ?? [];
+  const error = uploadError ?? (isError ? "Could not load the media library. Refresh to retry." : null);
 
   async function handleUpload(file: File) {
-    setError(null);
+    setUploadError(null);
 
     if (file.size > MAX_BYTES) {
-      setError("File is larger than the 10 MB limit.");
+      setUploadError("File is larger than the 10 MB limit.");
       return;
     }
     if (!ACCEPTED.split(",").includes(file.type)) {
-      setError("Unsupported file type. Use JPEG, PNG, WebP, AVIF, or GIF.");
+      setUploadError("Unsupported file type. Use JPEG, PNG, WebP, AVIF, or GIF.");
       return;
     }
 
     setUploading(true);
     try {
-      // 1. Presign
+      // 1. Presign — get a Cloudinary signature from our backend.
       const presignRes = await fetch("/api/media/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,39 +102,38 @@ export function MediaLibrary({ onSelect, compact = false }: MediaLibraryProps) {
       }
       const { data: presign } = await presignRes.json();
 
-      // 2. Direct PUT to the bucket
-      const putRes = await fetch(presign.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
+      // 2. POST the file to Cloudinary with the signed params.
+      //    Cloudinary requires multipart POST — NOT a raw PUT.
+      const form = new FormData();
+      form.append("file", file);
+      form.append("api_key", presign.apiKey);
+      form.append("timestamp", String(presign.timestamp));
+      form.append("signature", presign.signature);
+      form.append("folder", presign.folder);
+
+      const uploadRes = await fetch(presign.uploadUrl, {
+        method: "POST",
+        body: form, // do NOT set Content-Type; the browser sets the multipart boundary
       });
-      if (!putRes.ok) {
+      if (!uploadRes.ok) {
+        const body = await uploadRes.json().catch(() => null);
         throw new Error(
-          "Upload to storage failed. Check the bucket CORS policy allows PUT from this origin.",
+          body?.error?.message ?? "Upload to Cloudinary failed.",
         );
       }
+      const asset = await uploadRes.json();
 
-      // 3. Read provisional dimensions, then register
-      let width: number | undefined;
-      let height: number | undefined;
-      try {
-        const bmp = await createImageBitmap(file);
-        width = bmp.width;
-        height = bmp.height;
-        bmp.close();
-      } catch {
-        /* non-fatal — the worker reads true dimensions later */
-      }
-
+      // 3. Register the Cloudinary asset in our Media model.
       const registerRes = await fetch("/api/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          storageKey: presign.storageKey,
+          storageKey: asset.public_id,
+          url: asset.secure_url,
           mimeType: file.type,
-          sizeBytes: file.size,
-          width,
-          height,
+          sizeBytes: asset.bytes,
+          width: asset.width,
+          height: asset.height,
           altText: file.name.replace(/\.[^.]*$/, "").replaceAll(/[-_]+/g, " "),
         }),
       });
@@ -124,9 +142,16 @@ export function MediaLibrary({ onSelect, compact = false }: MediaLibraryProps) {
         throw new Error(body?.error ?? "Could not register the upload.");
       }
       const { data: media } = await registerRes.json();
-      setItems((prev) => [media, ...prev]);
+
+      // Prepend into the cached first page rather than refetching —
+      // keeps the "new upload appears instantly" UX.
+      queryClient.setQueryData<InfiniteData<MediaPage>>(QUERY_KEY, (old) => {
+        if (!old) return old;
+        const [first, ...rest] = old.pages;
+        return { ...old, pages: [{ ...first, data: [media, ...first.data] }, ...rest] };
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -179,7 +204,7 @@ export function MediaLibrary({ onSelect, compact = false }: MediaLibraryProps) {
       )}
 
       {/* Grid */}
-      {loading && items.length === 0 ? (
+      {isLoading && items.length === 0 ? (
         <div className={`mt-4 grid gap-3 ${gridCols}`}>
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="aspect-square animate-pulse rounded-lg bg-zinc-200" />
@@ -232,15 +257,15 @@ export function MediaLibrary({ onSelect, compact = false }: MediaLibraryProps) {
       )}
 
       {/* Load more */}
-      {page < totalPages && (
+      {hasNextPage && (
         <div className="mt-4 text-center">
           <button
             type="button"
-            disabled={loading}
-            onClick={() => void load(page + 1, true)}
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
             className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
           >
-            {loading ? "Loading…" : "Load more"}
+            {isFetchingNextPage ? "Loading…" : "Load more"}
           </button>
         </div>
       )}

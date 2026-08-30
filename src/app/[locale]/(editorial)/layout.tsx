@@ -11,6 +11,7 @@ import {
   Newspaper,
 } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.EDITOR, Role.AUTHOR];
 
@@ -133,7 +134,9 @@ export default async function EditorialLayout({
       </aside>
 
       {/* Content */}
-      <main className="min-w-0 flex-1 px-8 py-8">{children}</main>
+      <main className="min-w-0 flex-1 px-8 py-8">
+        <QueryProvider>{children}</QueryProvider>
+      </main>
     </div>
   );
 }

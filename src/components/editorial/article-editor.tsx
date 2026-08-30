@@ -508,7 +508,7 @@ export function ArticleEditor({
 
           {!isPrivileged && (
             <p className="mt-3 text-xs text-zinc-500">
-              Submit as “In review” when it's ready — an editor publishes it.
+              Submit as “In review” when it&apos;s ready — an editor publishes it.
             </p>
           )}
 

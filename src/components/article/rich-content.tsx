@@ -97,8 +97,8 @@ const renderNode = (node: JSONContent): ReactNode => {
       // Body images have unknown dimensions (worker-verified later),
       // so a plain <img> with lazy loading beats next/image here;
       // the cover image — the LCP candidate — does use next/image.
-      // eslint-disable-next-line @next/next/no-img-element
       return (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}

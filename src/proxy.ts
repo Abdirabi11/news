@@ -18,7 +18,7 @@ function withLocalePrefix(locale: string, pathname: string): string {
   return pathname === "/" ? `/${locale}` : `/${locale}${pathname}`;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
 
   const { pathname, search } = req.nextUrl;
   const seg = firstSegment(pathname);
@@ -67,7 +67,7 @@ export const config = {
      *  - anything with a file extension (.jpg, .css, .woff2, .xml …)
      *
      * The trailing (?!...) negative lookahead on the extension is the
-     * key: it stops the middleware firing on every image and font,
+     * key: it stops the proxy firing on every image and font,
      * which is where most of the "firing constantly" overhead comes from.
      */
     "/((?!api|_next/static|_next/image|_next/data|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|.*\\.[\\w]+$).*)",

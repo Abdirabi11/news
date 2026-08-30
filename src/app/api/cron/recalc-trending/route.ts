@@ -1,19 +1,27 @@
-import { type Job } from "bullmq";
+import { NextResponse } from "next/server";
+import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { ArticleStatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { redis, redisKeys } from "@/server/redis/client";
- 
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 const GRAVITY = 1.8;
 const VIEW_WINDOW_HOURS = 48;
 const CANDIDATE_WINDOW_DAYS = 7; // only recent articles can trend
 const MAX_PER_LOCALE = 50;
- 
-export async function recalcTrendingProcessor(job: Job): Promise<void> {
+const LOCALES = ["en", "so", "ar"] as const;
+
+/**
+ * QStash Schedule invokes this every 15 minutes. Replaces the old
+ * BullMQ `recalc-trending` worker with identical scoring logic.
+ */
+export const POST = verifySignatureAppRouter(async () => {
   const now = Date.now();
   const viewsSince = new Date(now - VIEW_WINDOW_HOURS * 3_600_000);
   const publishedSince = new Date(now - CANDIDATE_WINDOW_DAYS * 86_400_000);
- 
-  // 1. Candidate articles: published within the window.
+
   const candidates = await prisma.article.findMany({
     where: {
       status: ArticleStatus.PUBLISHED,
@@ -25,12 +33,12 @@ export async function recalcTrendingProcessor(job: Job): Promise<void> {
       translations: { select: { locale: true } },
     },
   });
+
   if (candidates.length === 0) {
-    await clearAllTrendingSets();
-    return;
+    for (const locale of LOCALES) await redis.del(redisKeys.trending(locale));
+    return NextResponse.json({ candidates: 0 });
   }
- 
-  // 2. Recent views per article (single grouped query).
+
   const stats = await prisma.articleDailyStat.groupBy({
     by: ["articleId"],
     where: {
@@ -42,36 +50,34 @@ export async function recalcTrendingProcessor(job: Job): Promise<void> {
   const recentViews = new Map(
     stats.map((s) => [s.articleId, s._sum.views ?? 0]),
   );
- 
-  // 3. Score and bucket by locale.
+
   const byLocale = new Map<string, { id: string; score: number }[]>();
   for (const article of candidates) {
     const views = recentViews.get(article.id) ?? 0;
     if (views === 0) continue; // no traffic, can't trend
- 
+
     const ageHours = Math.max(
       0,
       (now - (article.publishedAt?.getTime() ?? now)) / 3_600_000,
     );
     const score = views / Math.pow(ageHours + 2, GRAVITY);
- 
+
     for (const t of article.translations) {
       const bucket = byLocale.get(t.locale) ?? [];
       bucket.push({ id: article.id, score });
       byLocale.set(t.locale, bucket);
     }
   }
- 
-  // 4. Write each locale's set: build temp -> trim -> atomic RENAME.
-  for (const locale of ["en", "so", "ar"]) {
+
+  for (const locale of LOCALES) {
     const liveKey = redisKeys.trending(locale);
     const entries = byLocale.get(locale) ?? [];
- 
+
     if (entries.length === 0) {
       await redis.del(liveKey);
       continue;
     }
- 
+
     const tempKey = `${liveKey}:next`;
     const pipeline = redis.pipeline();
     pipeline.del(tempKey);
@@ -81,15 +87,12 @@ export async function recalcTrendingProcessor(job: Job): Promise<void> {
     pipeline.rename(tempKey, liveKey);
     await pipeline.exec();
   }
- 
+
   console.log(
-    `[recalc-trending] scored ${candidates.length} candidate(s) across ${byLocale.size} locale(s) (job ${job.id})`,
+    `[cron/recalc-trending] scored ${candidates.length} candidate(s) across ${byLocale.size} locale(s)`,
   );
-}
- 
-async function clearAllTrendingSets(): Promise<void> {
-  for (const locale of ["en", "so", "ar"]) {
-    await redis.del(redisKeys.trending(locale));
-  }
-}
- 
+  return NextResponse.json({
+    candidates: candidates.length,
+    locales: byLocale.size,
+  });
+});

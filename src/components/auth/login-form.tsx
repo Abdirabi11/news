@@ -30,7 +30,11 @@ export function LoginForm({ locale }: { locale: string }) {
         redirect: false,
       });
       if (!res || res.error) {
-        setError("Invalid email or password.");
+        setError(
+          res?.code === "too_many_attempts"
+            ? "Too many attempts. Please wait a few minutes and try again."
+            : "Invalid email or password.",
+        );
         setLoading(false);
         return;
       }

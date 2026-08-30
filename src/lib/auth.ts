@@ -1,30 +1,36 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { prisma } from "@/server/db/client";
- 
+import { rateLimit } from "@/server/redis/rate-limit";
+import { redisKeys } from "@/server/redis/client";
+
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
+
+/** Thrown when the login rate limit is hit; surfaces as ?code=too_many_attempts. */
+class TooManyAttemptsError extends CredentialsSignin {
+  code = "too_many_attempts";
+}
  
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // FIX: Explicitly tell Auth.js to trust Vercel's proxy host
   trustHost: true,
-  
-  adapter: PrismaAdapter(prisma),
+
+  // No adapter: Credentials-only auth with JWT sessions doesn't touch
+  // the Account/Session/VerificationToken tables an adapter manages —
+  // the User row itself is read/written directly in authorize() below.
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 15 * 60, // 15 minutes
+    updateAge: 5 * 60, // 5 minutes
   },
-  // No `pages.signIn` override: the real login route is locale-prefixed
-  // (/[locale]/login) and NextAuth's `pages` config can't express that.
-  // Auth redirects are handled explicitly by the (editorial) layout and
-  // pages instead, which know the current locale.
+
   providers: [
     Credentials({
       name: "Email & Password",
@@ -32,16 +38,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(raw) {
+      async authorize(raw, request) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
- 
+
         const { email, password } = parsed.data;
- 
+
+        // Fail CLOSED: auth is the one place a Redis blip should
+        // block requests rather than let credential-stuffing through
+        // unlimited (contrast with the fail-open view-counter).
+        const ip =
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          "unknown";
+        const limit = await rateLimit({
+          key: redisKeys.rateLimit("login", ip),
+          limit: 10,
+          windowMs: 5 * 60_000,
+          failOpen: false,
+        });
+        if (!limit.success) throw new TooManyAttemptsError();
+
         const user = await prisma.user.findUnique({
           where: { email: email.toLowerCase() },
         });
- 
+
         // Reject OAuth-only accounts (no hash) and deactivated users.
         if (!user?.passwordHash || !user.isActive) return null;
  
@@ -105,17 +125,6 @@ export type GuardResult =
   | { ok: true; user: SessionUser }
   | { ok: false; response: NextResponse };
  
-/**
- * Route Handler / Server Action guard.
- *
- * Usage:
- *   const guard = await requireRole([Role.ADMIN, Role.EDITOR]);
- *   if (!guard.ok) return guard.response;
- *   // guard.user is now typed and authorized
- *
- * Returns a discriminated union instead of throwing, so handlers
- * stay linear and no try/catch plumbing is needed.
- */
 export async function requireRole(allowed: Role[]): Promise<GuardResult> {
   const session = await auth();
  
@@ -149,6 +158,8 @@ export async function requireRole(allowed: Role[]): Promise<GuardResult> {
     },
   };
 }
+
+
  
 /** Convenience wrapper: any signed-in user (Reader and up). */
 export const requireUser = () =>

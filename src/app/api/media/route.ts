@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { redisKeys } from "@/server/redis/client";
@@ -10,6 +10,7 @@ import {
   listMediaQuerySchema,
 } from "@/server/validators/media";
 import { publicUrl } from "@/server/services/storage";
+import { processMedia } from "@/server/services/process-media";
  
 export const dynamic = "force-dynamic";
  
@@ -86,10 +87,10 @@ export async function POST(req: NextRequest) {
       },
     });
  
-    // TODO(Phase 3): enqueue BullMQ "media:process" job here to
-    // verify the object exists in the bucket, read true dimensions
-    // server-side, and generate thumbnail variants.
- 
+    // Verify the object landed and flip `processed` — after the
+    // response is sent, doesn't block the upload flow.
+    after(() => processMedia(media.id));
+
     return NextResponse.json(
       { data: media },
       { status: 201, headers: rateLimitHeaders(rl) },

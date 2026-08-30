@@ -1,23 +1,3 @@
-/**
- * Request-scoped cached data loaders.
- *
- * React's cache() memoizes a function for the duration of ONE server
- * request. If the page component AND generateMetadata both call
- * getCategory("technology", "en"), the Prisma query runs ONCE and the
- * second call gets the memoized promise. This is what kills your
- * duplicate [getCategory] logs.
- *
- * Scope: cache() is per-request, NOT cross-request. For cross-request
- * caching (surviving between visitors) you'd layer unstable_cache or
- * ISR on top — see notes at the bottom.
- *
- * Rule of thumb:
- *   - cache()          -> dedupe within one render (metadata + page)
- *   - unstable_cache   -> persist a query result across requests with
- *                         a TTL + tags (good for taxonomy that rarely
- *                         changes)
- *   - ISR (revalidate) -> cache the whole rendered page
- */
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { Locale } from "@prisma/client";

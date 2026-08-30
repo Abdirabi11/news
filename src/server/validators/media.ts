@@ -22,12 +22,7 @@ export const presignMediaSchema = z.object({
  
 export const registerMediaSchema = z.object({
   /** Must be a key previously issued by /api/media/presign. */
-  storageKey: z
-    .string()
-    .regex(
-      /^uploads\/[0-9a-f-]{36}\/[a-z0-9.-]+$/,
-      "Invalid storage key format.",
-    ),
+  storageKey: z.string().regex(/^[a-zA-Z0-9._/-]+$/, "Invalid storage key format."),
   mimeType: z
     .string()
     // FIX: Changed .has() to .includes() here too

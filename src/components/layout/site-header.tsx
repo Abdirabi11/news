@@ -32,10 +32,10 @@ export async function SiteHeader({ locale }: { locale: AppLocale }) {
             <Image
               src="/logo.svg"
               alt={dict.site.name}
-              width={180}
-              height={40}
+              width={240}
+              height={52}
               priority
-              className="h-8 w-auto sm:h-9"
+              className="h-10 w-auto sm:h-12"
             />
           </Link>
           {/* Interactive nav (client) */}

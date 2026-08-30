@@ -1,21 +1,6 @@
 "use server";
 
-/**
- * User management server actions (Admin-only).
- *
- * Every action re-checks requireRole([Role.ADMIN]) — never trust that
- * the UI hid a button. Guards enforced here, not in the client.
- *
- * Safety invariants (these prevent locking everyone out):
- *   - You cannot delete your own account.
- *   - You cannot delete or demote the LAST remaining active admin.
- *   - Role/status changes that would remove the final admin are refused.
- *
- * On success each action revalidates the users list. Because the app
- * uses prefix-except-default routing, we revalidate by PATH for the
- * canonical (unprefixed) editorial route; adjust if your editorial
- * group is served under a locale prefix in your setup.
- */
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -116,7 +101,7 @@ export async function updateUser(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const admin = await requireRole([Role.ADMIN]);
+  await requireRole([Role.ADMIN]);
   const locale = coerceLocale(formData.get("locale"));
 
   const parsed = updateSchema.safeParse({

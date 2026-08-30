@@ -12,7 +12,6 @@ import {
   isAppLocale,
   localeHref,
   localeUrl,
-  LOCALES,
   type AppLocale,
 } from "@/i18n";
 import { RichContent } from "@/components/article/rich-content";

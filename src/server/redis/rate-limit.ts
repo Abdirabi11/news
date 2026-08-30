@@ -16,6 +16,7 @@ redis.defineCommand("fixedWindowHit", {
 });
  
 declare module "ioredis" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- must match ioredis's own RedisCommander<Context> param name for declaration merging
   interface RedisCommander<Context> {
     fixedWindowHit(
       key: string,

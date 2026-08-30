@@ -60,45 +60,6 @@ export function signUpload(opts: { folder?: string } = {}): SignedUpload {
   };
 }
 
-/**
- * Shape of the Cloudinary upload response fields we care about.
- * (Cloudinary returns many more; these map cleanly to our Media model.)
- */
-export interface CloudinaryAsset {
-  secure_url: string;
-  public_id: string;
-  bytes: number;
-  width?: number;
-  height?: number;
-  format: string;
-  resource_type: string;
-}
-
-/**
- * Map a Cloudinary asset to our Media create-input shape. The caller
- * supplies uploaderId + optional altText/caption. public_id becomes
- * our storageKey (unique), secure_url our url.
- */
-export function assetToMediaInput(
-  asset: CloudinaryAsset,
-  uploaderId: string,
-  extra: { altText?: string; caption?: string } = {},
-) {
-  return {
-    uploaderId,
-    storageKey: asset.public_id,
-    url: asset.secure_url,
-    mimeType: `${asset.resource_type}/${asset.format}`,
-    sizeBytes: asset.bytes,
-    width: asset.width ?? null,
-    height: asset.height ?? null,
-    altText: extra.altText ?? null,
-    caption: extra.caption ?? null,
-    processed: true, // Cloudinary handles derivations on the fly
-  };
-}
-
-
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",

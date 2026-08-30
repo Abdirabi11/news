@@ -10,7 +10,6 @@ const baseOptions: RedisOptions = {
 };
  
 declare global {
-  // eslint-disable-next-line no-var
   var redisGlobal: Redis | undefined;
 }
  
@@ -30,20 +29,9 @@ export const redis: Redis = globalThis.redisGlobal ?? createRedisClient();
 if (process.env.NODE_ENV !== "production") {
   globalThis.redisGlobal = redis;
 }
- 
-/**
- * Dedicated connection for BullMQ Queues/Workers.
- * Call once per Queue and once per Worker (in the worker process).
- */
-export const createBullConnection = (): Redis =>
-  new Redis(REDIS_URL, {
-    ...baseOptions,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  });
- 
+
 export const redisKeys = {
-  /** HINCRBY buffer of pending views, flushed to PG by BullMQ. */
+  /** HINCRBY buffer of pending views, flushed to Postgres by /api/cron/sync-views. */
   pendingViews: () => "views:pending",
   /** Per-locale trending sorted set (member = articleId, score = decayed views). */
   trending: (locale: string) => `trending:${locale}`,

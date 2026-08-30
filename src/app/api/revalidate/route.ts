@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { timingSafeEqual } from "crypto";
 import { z } from "zod";
- 
+
 export const dynamic = "force-dynamic";
- 
+
 const bodySchema = z.object({
   paths: z.array(z.string().startsWith("/").max(500)).max(200).default([]),
   tags: z.array(z.string().min(1).max(100)).max(50).default([]),
 });
- 
+
+function isValidSecret(provided: string | null, expected: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  // Constant-time compare: length check first (leaking length alone
+  // isn't the threat model here), then timingSafeEqual on the bytes.
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.REVALIDATE_SECRET;
   if (!secret) {
     console.error("[revalidate] REVALIDATE_SECRET is not configured");
     return NextResponse.json({ error: "Not configured." }, { status: 500 });
   }
- 
+
   const provided = req.headers.get("x-revalidate-secret");
-  if (provided !== secret) {
+  if (!isValidSecret(provided, secret)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
  
@@ -33,8 +43,10 @@ export async function POST(req: NextRequest) {
   }
   
   for (const tag of parsed.data.tags) {
-    // @ts-ignore - Next.js type definition mismatch false-positive
-    revalidateTag(tag);
+    // This route is an external webhook target, which is the one
+    // case Next's docs call out for immediate expiry via `{ expire: 0 }`
+    // — the bare single-arg form is deprecated in this Next version.
+    revalidateTag(tag, { expire: 0 });
   }
  
   return NextResponse.json({
